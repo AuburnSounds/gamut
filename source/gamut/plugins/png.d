@@ -44,18 +44,10 @@ version(decodePNG)
 void loadPNG(ref Image image, IOStream *io, IOHandle handle, int page, int flags, void *data) @trusted
 {
     IOAndHandle ioh;
-    ioh.io = io;
-    ioh.handle = handle;
-
     stbi_io_callbacks stb_callback;
-    stb_callback.read = &stb_read;
-    stb_callback.skip = &stb_skip;
-    stb_callback.eof = &stb_eof;
+    initSTBCallbacks(io, handle, &ioh, &stb_callback);
 
     bool is16bit = stbi__png_is16(&stb_callback, &ioh);
-
-    ubyte* decoded;
-    int width, height, components;
 
     int requestedComp = computeRequestedImageComponents(flags);
     if (requestedComp == 0) // error
@@ -72,6 +64,9 @@ void loadPNG(ref Image image, IOStream *io, IOHandle handle, int page, int flags
         image.error(kStrImageDecodingIOFailure);
         return;
     }
+
+    ubyte* decoded;
+    int width, height, components;
 
     float ppmX = -1;
     float ppmY = -1;
@@ -101,7 +96,7 @@ void loadPNG(ref Image image, IOStream *io, IOHandle handle, int page, int flags
     {
         image.error(kStrImageDecodingFailed);
         return;
-    }    
+    }
 
     if (!imageIsValidSize(1, width, height))
     {
@@ -215,39 +210,4 @@ bool savePNG(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
         return false;
 
     return true;
-}
-
-private:
-
-// Need to give both a IOStream* and a IOHandle to STB callbacks.
-static struct IOAndHandle
-{
-    IOStream* io;
-    IOHandle handle;
-}
-
-// fill 'data' with 'size' bytes.  return number of bytes actually read
-int stb_read(void *user, char *data, int size) @system
-{
-    IOAndHandle* ioh = cast(IOAndHandle*) user;
-
-    // Cannot ask more than 0x7fff_ffff bytes at once.
-    assert(size <= 0x7fffffff);
-
-    size_t bytesRead = ioh.io.read(data, 1, size, ioh.handle);
-    return cast(int) bytesRead;
-}
-
-// skip the next 'n' bytes, or 'unget' the last -n bytes if negative
-void stb_skip(void *user, int n) @system
-{
-    IOAndHandle* ioh = cast(IOAndHandle*) user;
-    ioh.io.skipBytes(ioh.handle, n);
-}
-
-// returns nonzero if we are at end of file/data
-int stb_eof(void *user) @system
-{
-    IOAndHandle* ioh = cast(IOAndHandle*) user;
-    return ioh.io.eof(ioh.handle);
 }
