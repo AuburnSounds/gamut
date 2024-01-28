@@ -2143,6 +2143,10 @@ version(decodeBMP)
         info.mr = info.mg = info.mb = info.ma = 0;
         info.extra_read = 14;
 
+        s.ppmX = -1;
+        s.ppmY = -1;
+        s.pixelAspectRatio = -1;
+
         if (info.offset < 0) return null;
 
         if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108 && hsz != 124) return null;
@@ -2161,8 +2165,16 @@ version(decodeBMP)
             if (compress >= 4) return null; // this includes PNG/JPEG modes
             if (compress == 3 && info.bpp != 16 && info.bpp != 32) return null; // bitfields requires 16 or 32 bits/pixel
             stbi__get32le(s); // discard sizeof
-            stbi__get32le(s); // discard hres
-            stbi__get32le(s); // discard vres
+
+            int biXPelsPerMeter  = stbi__get32le(s); // discard hres
+            int biYPelsPerMeter  = stbi__get32le(s); // discard vres
+            if (biXPelsPerMeter > 1) s.ppmX = biXPelsPerMeter; // do not consider 0, 1, or negative values
+            if (biYPelsPerMeter > 1) s.ppmY = biYPelsPerMeter; // do not consider 0, 1, or negative values
+            if (s.ppmX != -1 && s.ppmY != -1)
+            {
+                s.pixelAspectRatio = s.ppmX / s.ppmY;
+            }
+
             stbi__get32le(s); // discard colorsused
             stbi__get32le(s); // discard max important
             if (hsz == 40 || hsz == 56) {
