@@ -2,7 +2,7 @@
 
 Gamut (DUB package: `gamut`) is an image decoding/encoding library for D.
 
-It's design is inspired by the FreeImage design, where the Image concept is monomorphic and can do it all.
+Inspired by the FreeImage design, the Image concept is monomorphic and can do it all.
 
 Gamut tries to have the fastest and most memory-conscious image decoders available in pure D code.
 It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
