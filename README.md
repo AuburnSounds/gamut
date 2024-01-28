@@ -14,6 +14,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 - JPEG: 8-bit, L/RGB/RGBA, baseline and progressive
 - TGA: 8-bit, indexed, L/LA/RGB/RGBA
 - GIF: indexed, animation support
+- BMP: indexed 1/4/8-bit no-RLE, 8-bit RGB/RGBA 
 - QOI: 8-bit, RGB/RGBA
 - QOIX: 8-bit, 10-bit, L/LA/RGB/RGBA. _Improvement upon QOI. This format may change between major Gamut tags, so is not a storage format._
 
@@ -32,6 +33,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 
 ## Changelog
 
+- **v2.5.y** Added BMP input.
 - **v2.4.y** Added BMP output.
 - **v2.3.y** Added GIF input and GIF output. Added multilayer images.
 - **v2.2.y** Added 16-bit PNG output.
