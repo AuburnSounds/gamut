@@ -23,6 +23,7 @@ enum ImageFormat
     TGA     =  5, /// Truevision TGA
     GIF     =  6, /// Graphics Interchange Format
     BMP     =  7, /// Windows or OS/2 Bitmap File (*.BMP)
+    JXL     =  8, /// JPEG XL Image Coding System (ISO/IEC 18181)
 }
 
 /// Pixel component type.
