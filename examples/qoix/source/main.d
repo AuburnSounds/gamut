@@ -39,7 +39,7 @@ int main(string[] args)
         writefln("*** image of size %.1f kb: %s", original_size_kb, f);
 
         Image image;
-        image.loadFromMemory(originalImage);
+        double orig_decode_ms = measure( { image.loadFromMemory(originalImage); } );
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
 
@@ -67,8 +67,8 @@ int main(string[] args)
         mean_bpp += bit_per_pixel;
         double size_vs_original = qoix_size_kb / original_size_kb;
 
-        writefln("       decode      decode mpps   encode mpps      bit-per-pixel        size        reduction");
-        writefln("  %8.2f ms       %8.2f      %8.2f           %8.5f     %9.1f kb  %9.4f", qoix_decode_ms, qoix_decode_mpps, qoix_encode_mpps, bit_per_pixel, qoix_size_kb, size_vs_original);
+        writefln("    orig dec          decode      decode mpps   encode mpps      bit-per-pixel        size        reduction");
+        writefln("  %8.2f ms      %8.2f ms       %8.2f      %8.2f           %8.5f     %9.1f kb  %9.4f", orig_decode_ms, qoix_decode_ms, qoix_decode_mpps, qoix_encode_mpps, bit_per_pixel, qoix_size_kb, size_vs_original);
         N += 1;
 
         // Check encoding is properly done.
