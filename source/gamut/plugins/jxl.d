@@ -17,7 +17,7 @@ import gamut.internals.errors;
 import gamut.internals.types;
 
 version(decodeJXL) import gamut.codecs.j40;
-version(decodeJXL) pragma(msg, "included!");
+
 ImageFormatPlugin makeJXLPlugin()
 {
     ImageFormatPlugin p;
@@ -141,5 +141,8 @@ void loadJXL(ref Image image, IOStream *io, IOHandle handle, int page, int flags
 
 bool detectJXL(IOStream *io, IOHandle handle) @trusted
 {
-    return false; // TODO
+    // Note: only 'naked' codestream supported.
+    // JPEG XL encapsulated in ISO BMFF not supported.
+    static immutable ubyte[2] jxlSignature = [0xFF, 0x0A];
+    return fileIsStartingWithSignature(io, handle, jxlSignature);
 }

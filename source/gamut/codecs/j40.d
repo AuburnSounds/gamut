@@ -131,8 +131,8 @@ private:
 // "SPEC" comments are used for incorrect, ambiguous or misleading specification issues.
 // "TODO spec" comments are roughly same, but not yet fully confirmed & reported.
 
-// Note: J40__INIT means zero-initialization! Adapt .init when encoutnering one.
-//       Warning, as j40.h also uses a .init field!
+// Note: J40__INIT means zero-initialization, but we use .init and it has been done carefully.
+//       Warning, as j40.h also uses a .init field! (named init_ here).
 
 // rule of thumb: sparingly use them, except for the obvious error cases
 version(LDC)

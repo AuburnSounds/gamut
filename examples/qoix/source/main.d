@@ -20,7 +20,7 @@ void usage()
 int main(string[] args)
 {    
     // Encore all image in test suite in QOI
-    auto files = filter!`endsWith(a.name,".png")`(dirEntries("test-images",SpanMode.depth));
+    auto files = filter!`endsWith(a.name,".png") || endsWith(a.name,".jpg") || endsWith(a.name,".jxl")`(dirEntries("test-images",SpanMode.depth));
 
     double mean_encode_mpps = 0;
     double mean_decode_mpps = 0;
