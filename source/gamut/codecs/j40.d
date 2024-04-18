@@ -8671,40 +8671,33 @@ public j40_frame j40_current_frame(j40_image *image)
     return frame;
 }
 
-
+// Not: unlike original j40.h, this return a j40_pixels_u8x4 with null pointer in case of error
+// With that, we now the allocation method of inner.rendered_rgba
 public j40_pixels_u8x4 j40_frame_pixels_u8x4(j40_frame*frame, int channel) 
 {
     static const j40__origin ORIGIN = J40__ORIGIN_frame_pixels;
 
-    static immutable ubyte[] ERROR_PIXELS_DATA = 
-    [
-        255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255,
-        255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255,
-        255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255,
-        255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255,
-        255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255,
-        255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,  0, 255,0,0,  0, 255,0,0,  0, 255,0,0,255, 255,0,0,  0, 255,0,0,255, 255,0,0,255, 255,0,0,255,
-        255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255, 255,0,0,255,
-    ];
-
-    j40_pixels_u8x4 ERROR_PIXELS = j40_pixels_u8x4(21, 7, 21 * 4, ERROR_PIXELS_DATA.ptr);
-
     j40__inner*inner;
     j40_pixels_u8x4 pixels;
 
-    if (!frame || frame.magic != J40__FRAME_MAGIC) return ERROR_PIXELS;
+    if (!frame || frame.magic != J40__FRAME_MAGIC) 
+        return j40_pixels_u8x4.init;
     inner = frame.inner;
-    if (!inner || inner.magic != J40__INNER_MAGIC) return ERROR_PIXELS;
+    if (!inner || inner.magic != J40__INNER_MAGIC) 
+        return j40_pixels_u8x4.init;
 
     // TODO support more channels
-    if (channel != J40_RGBA) return ERROR_PIXELS;
+    if (channel != J40_RGBA) 
+    {
+        return j40_pixels_u8x4.init;
+    }
 
     // TODO this condition is impossible under the current API
     if (!inner.rendered)
     {
         inner.origin = ORIGIN;
         inner.err = J40__4("Urnd");
-        return ERROR_PIXELS;
+        return j40_pixels_u8x4.init;
     }
 
     assert(inner.rendered_rgba.width % 4 == 0);
@@ -8713,6 +8706,9 @@ public j40_pixels_u8x4 j40_frame_pixels_u8x4(j40_frame*frame, int channel)
     pixels.stride_bytes = inner.rendered_rgba.stride_bytes;
     pixels.data = cast(void*) inner.rendered_rgba.pixels;
     return pixels;
+
+error:
+    return j40_pixels_u8x4.init;
 }
 
 public const(j40_u8x4)* j40_row_u8x4(j40_pixels_u8x4 pixels, int y) 

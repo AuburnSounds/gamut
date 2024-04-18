@@ -40,9 +40,6 @@ void loadJXL(ref Image image, IOStream *io, IOHandle handle, int page, int flags
     // Read whole file at once.
     // PERF: j40 could use our IOStream directly eventually.
 
-
-    import core.stdc.stdio;
-    printf("OK\n");
     // Find length of input
     if (io.seek(handle, 0, SEEK_END) != 0)
     {
@@ -110,48 +107,39 @@ void loadJXL(ref Image image, IOStream *io, IOHandle handle, int page, int flags
     }
 
     j40_frame frame = j40_current_frame(&jxlimage);
-    j40_pixels_u8x4 pixels = j40_frame_pixels_u8x4(&frame, J40_RGBA);        
+    j40_pixels_u8x4 pixels = j40_frame_pixels_u8x4(&frame, J40_RGBA);
+    if (pixels.data is null)
+    {
+        image.error(kStrImageDecodingFailed);
+        return;
+    }
 
-    
-    // PERF: create with right layout, copy data there
+    // Since J40 renders in a buffer created with _mm_malloc aligned on 32-byte, 
+    // we can't use it as is in gamut and have to copy.
+    // Allocate new pixel 
+    // PERF: modify j40 to at least allow us to steal the allocation, save a copy sometimes
 
+    Image view;
+    view.createViewFromData(cast(void*) pixels.data, // const_cast here
+                            pixels.width, 
+                            pixels.height, 
+                            PixelType.rgba8,
+                            pixels.stride_bytes);
+    image = view.clone();
+
+    // TODO: resolution/aspect ratio from JPEG XL
+    image._pixelAspectRatio  = GAMUT_UNKNOWN_ASPECT_RATIO;
+    image._resolutionY       = GAMUT_UNKNOWN_RESOLUTION;
     
-    ubyte* decoded = null;//pixels.data.mallocIdup;//???;//
-    
-    image._type = PixelType.rgba8;
-    image._width = pixels.width;
-    image._height = pixels.height;
-    image._allocArea = decoded;
-    image._data = decoded;
-    image._pitch = pixels.stride_bytes;
-    image._pixelAspectRatio = GAMUT_UNKNOWN_ASPECT_RATIO;
-    image._resolutionY = GAMUT_UNKNOWN_RESOLUTION;
     image._layoutConstraints = LAYOUT_DEFAULT;
     image._layerCount = 1;
     image._layerOffset = 0;
 
     // Convert to target type and constraints
     image.convertTo(applyLoadFlags(image._type, flags), cast(LayoutConstraints) flags);
-
-    printf("Decoding actually completed\n");
 }
 
 bool detectJXL(IOStream *io, IOHandle handle) @trusted
 {
-return false;
-    /+
-    // Find length of input
-    if (io.seek(handle, 0, SEEK_END) != 0)
-    {
-        return false;
-    }
-
-    int len = cast(int) io.tell(handle); // works, see io.d for why
-
-    if (!io.rewind(handle))
-    {
-        return false;
-    }
-
-    return len == 205502;+/
+    return false; // TODO
 }

@@ -750,6 +750,7 @@ public:
     /// Clone an existing image. 
     /// This image should have plain pixels.
     /// Tags: #valid #data #plain.
+    // TODO: allow to override layout constraints... need LAYOUT_KEEP
     Image clone()
     {
         assert(isPlainPixels());
