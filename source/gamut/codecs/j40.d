@@ -8116,6 +8116,17 @@ j40_err j40__combine_vardct(j40__st *st, j40__lf_group_st *ggs) {
     j40__frame_st *f = st.frame;
     long i;
 
+    // GP: this used to leak one plane and f.gmodular.channel
+    // See https://github.com/AuburnSounds/gamut/issues/69
+    for (i = 0; i < f.gmodular.num_channels; ++i)
+    {
+        j40__free_plane(&f.gmodular.channel[i]);
+    }
+    j40__free(f.gmodular.channel);
+    f.gmodular.num_channels = 0;
+    f.gmodular.channel = null;
+
+
     // TODO pretty incorrect to do this
     do { if (J40_UNLIKELY(st.err)) goto J40__ON_ERROR; if (J40_UNLIKELY((!f.do_ycbcr && st.image.cspace != J40__CS_GREY) == 0)) { j40__set_error(st, J40__4("TODO: we don't yet do YCbCr or gray")); goto J40__ON_ERROR; } } while (0);
     do { if (J40_UNLIKELY(st.err)) goto J40__ON_ERROR; if (J40_UNLIKELY((st.image.modular_16bit_buffers) == 0)) { j40__set_error(st, J40__4("TODO: !modular_16bit_buffers")); goto J40__ON_ERROR; } } while (0);
