@@ -1580,8 +1580,8 @@ j40_err j40__refill_buffer(j40__st *st)
     long available, wanted_codeoff;
     int i;
 
-    assert(J40__INBOUNDS(bits.ptr, buffer.buf, buffer.size));
-    assert(J40__INBOUNDS(checkpoint.ptr, buffer.buf, buffer.size));
+    assert(J40__INBOUNDS(bits.ptr, buffer.buf, cast(size_t) buffer.size));
+    assert(J40__INBOUNDS(checkpoint.ptr, buffer.buf, cast(size_t) buffer.size));
     assert(checkpoint.ptr <= bits.ptr);
 
     // trim the committed portion from the backing buffer
@@ -1589,7 +1589,7 @@ j40_err j40__refill_buffer(j40__st *st)
         long committed_size = (long) (checkpoint.ptr - buffer.buf);
         assert(committed_size <= buffer.size); // so committed_size can't overflow
         // this also can't overflow, because buffer.size never exceeds SIZE_MAX
-        memmove(buffer.buf, checkpoint.ptr, (size_t) (buffer.size - committed_size));
+        memmove(buffer.buf, checkpoint.ptr, cast(size_t) (buffer.size - committed_size));
         buffer.size -= committed_size;
         bits.ptr -= committed_size;
         bits.end -= committed_size;
@@ -4107,7 +4107,7 @@ void j40__wp_before_predict_internal(int P)(j40__wp2P!P* wp, int x, int y,
         int2P_t errsum = errn[i] + errw[i] + errnw[i] + errww[i] + errne[i] + errw2[i];
         int shift = j40__max32(j40__floor_lg2P!P(cast(uint2P_t) errsum + 1) - 5, 0);
         // SPEC missing the final `>> shift`
-        w[i] = cast(int2P_t) (4 + (cast(long) wp.params.w[i] * J40__24DIVP1[errsum >> shift] >> shift));
+        w[i] = cast(int2P_t) (4 + (cast(long) wp.params.w[i] * J40__24DIVP1[cast(size_t)(errsum >> shift)] >> shift));
     }
     logw = j40__floor_lg2P!P(cast(uint2P_t) (w[0] + w[1] + w[2] + w[3])) - 4;
     wsum = sum = 0;
@@ -4116,7 +4116,7 @@ void j40__wp_before_predict_internal(int P)(j40__wp2P!P* wp, int x, int y,
         sum += wp.pred[i] * w[i];
     }
     // SPEC missing `- 1` before scaling
-    wp.pred[4] = cast(int2P_t) ((cast(long) sum + (wsum >> 1) - 1) * J40__24DIVP1[wsum - 1] >> 24);
+    wp.pred[4] = cast(int2P_t) ((cast(long) sum + (wsum >> 1) - 1) * J40__24DIVP1[cast(size_t)(wsum - 1)] >> 24);
     if (((wp.trueerrn ^ wp.trueerrw) | (wp.trueerrn ^ wp.trueerrnw)) <= 0) {
         int2P_t lo = j40__min2P!P(pw, j40__min2P!P(pn, pne)) * 8; // SPEC missing shifts
         int2P_t hi = j40__max2P!P(pw, j40__max2P!P(pn, pne)) * 8;
@@ -5632,7 +5632,8 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
     int *lehmer = null;
     j40__code_spec codespec;
     j40__code_st code;
-    long i, nremoved;
+    int i; 
+    long nremoved;
     int pass;
 
     // TODO remove int restrictions
@@ -5687,14 +5688,14 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
         sections[i + 1].pass = -1;
         sections[i + 1].idx = i;
     }
-    toc.hf_global_codeoff = sections[f.num_lf_groups + 1].codeoff;
-    toc.hf_global_size = sections[f.num_lf_groups + 1].size;
-    sections[f.num_lf_groups + 1].codeoff = -1;
+    toc.hf_global_codeoff = sections[cast(int)f.num_lf_groups + 1].codeoff;
+    toc.hf_global_size = sections[cast(int)f.num_lf_groups + 1].size;
+    sections[cast(int)f.num_lf_groups + 1].codeoff = -1;
     for (pass = 0; pass < f.num_passes; ++pass) {
         long sectionid = 1 + f.num_lf_groups + 1 + pass * f.num_groups;
         for (i = 0; i < f.num_groups; ++i) {
-            sections[sectionid + i].pass = pass;
-            sections[sectionid + i].idx = i;
+            sections[cast(int)sectionid + i].pass = pass;
+            sections[cast(int)sectionid + i].idx = i;
         }
     }
 
@@ -5710,7 +5711,7 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
             for (ggcolumn = 0; ggcolumn < f.ggcolumns; ++ggcolumn) 
             {
                 long ggidx = cast(long) ggrow * f.ggcolumns + ggcolumn, ggsection = 1 + ggidx;
-                long ggcodeoff = sections[ggsection].codeoff;
+                long ggcodeoff = sections[cast(int)ggsection].codeoff;
                 long gsection_base =
                     1 + f.num_lf_groups + 1 + (long) (ggrow * 8) * f.gcolumns + (ggcolumn * 8);
                 int grows_in_gg = j40__min32((ggrow + 1) * 8, f.grows) - ggrow * 8;
@@ -5722,18 +5723,18 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
                         for (gcolumn_in_gg = 0; gcolumn_in_gg < gcolumns_in_gg; ++gcolumn_in_gg) {
                             long gsection = gsection_base + pass * f.num_groups + 
                                 (grow_in_gg * f.gcolumns + gcolumn_in_gg);
-                            if (sections[gsection].codeoff > ggcodeoff) continue;
-                            if (relocs[ggidx].next) 
+                            if (sections[cast(int)gsection].codeoff > ggcodeoff) continue;
+                            if (relocs[cast(int)ggidx].next) 
                             {
                                 relocs = cast(reloc*) j40__realloc64(st, relocs, reloc.sizeof, nrelocs + 1, &relocs_cap);
 
-                                relocs[nrelocs] = relocs[ggidx];
-                                relocs[ggidx].next = nrelocs++;
+                                relocs[cast(int)nrelocs] = relocs[cast(int)ggidx];
+                                relocs[cast(int)ggidx].next = nrelocs++;
                             } else {
-                                relocs[ggidx].next = -1;
+                                relocs[cast(int)ggidx].next = -1;
                             }
-                            relocs[ggidx].section = sections[gsection];
-                            sections[gsection].codeoff = -1;
+                            relocs[cast(int)ggidx].section = sections[cast(int)gsection];
+                            sections[cast(int)gsection].codeoff = -1;
                         }
                     }
                 }
@@ -5746,7 +5747,7 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
         if (sections[i].codeoff < 0) {
             ++nremoved;
         } else {
-            sections[i - nremoved] = sections[i];
+            sections[cast(int)(i - nremoved)] = sections[i];
         }
     }
     qsort(sections, cast(size_t) (nsections - nremoved), j40__section.sizeof, &j40__compare_section);
@@ -5757,14 +5758,14 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
     nsections2 = 0;
     for (i = 0; i < nsections - nremoved; ++i) {
         long j, first_reloc_off;
-        sections2[nsections2++] = sections[i];
+        sections2[cast(int)(nsections2++)] = sections[i];
         if (sections[i].pass >= 0) continue;
         j = sections[i].idx;
-        if (!relocs[j].next) continue;
+        if (!relocs[cast(int)j].next) continue;
         first_reloc_off = nsections2;
         while (j >= 0) {
-            sections2[nsections2++] = relocs[j].section;
-            j = relocs[j].next;
+            sections2[cast(int)(nsections2++)] = relocs[cast(int)j].section;
+            j = relocs[cast(int)j].next;
         }
         qsort(sections2 + first_reloc_off, cast(size_t) (nsections2 - first_reloc_off),
             j40__section.sizeof, &j40__compare_section);
@@ -8085,11 +8086,11 @@ J40__ON_ERROR:
 }
 
 j40_err j40__lf_or_pass_group_in_section(j40__st *st, j40__toc *toc, j40__lf_group_st *ggs) {
-    j40__section section = toc.sections[toc.nsections_read];
+    j40__section section = toc.sections[cast(int) toc.nsections_read];
     j40__section_st sst;
 
     if (section.pass < 0) { // LF group
-        j40__lf_group_st *gg = &ggs[section.idx];
+        j40__lf_group_st *gg = &ggs[cast(int) section.idx];
         do { if (J40_UNLIKELY(j40__init_section_state(&st, &sst, section.codeoff, section.size))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
         do { if (J40_UNLIKELY(j40__finish_section_state(&st, &sst, j40__lf_group(st, gg)))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
         gg.loaded = 1;
@@ -8100,7 +8101,7 @@ j40_err j40__lf_or_pass_group_in_section(j40__st *st, j40__toc *toc, j40__lf_gro
     {
         // pass group
         j40__group_info info = j40__group_info_(st.frame, section.idx);
-        j40__lf_group_st *gg = &ggs[info.ggidx];
+        j40__lf_group_st *gg = &ggs[cast(int) info.ggidx];
         assert(gg.loaded); // j40__read_toc should have taken care of this
         do { if (J40_UNLIKELY(j40__init_section_state(&st, &sst, section.codeoff, section.size))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
         do { if (J40_UNLIKELY(j40__finish_section_state(&st, &sst, j40__pass_group( st, section.pass, info.gx_in_gg, info.gy_in_gg, info.gw, info.gh, section.idx, gg)))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
@@ -8120,7 +8121,7 @@ j40_err j40__combine_vardct(j40__st *st, j40__lf_group_st *ggs) {
     // See https://github.com/AuburnSounds/gamut/issues/69
     for (i = 0; i < f.gmodular.num_channels; ++i)
     {
-        j40__free_plane(&f.gmodular.channel[i]);
+        j40__free_plane(&f.gmodular.channel[cast(int) i]);
     }
     j40__free(f.gmodular.channel);
     f.gmodular.num_channels = 0;
@@ -8135,11 +8136,11 @@ j40_err j40__combine_vardct(j40__st *st, j40__lf_group_st *ggs) {
     f.gmodular.channel = cast(j40__plane*) j40__calloc(3, j40__plane.sizeof);
 
     for (i = 0; i < f.gmodular.num_channels; ++i) {
-        do { if (J40_UNLIKELY(j40__init_plane( st, J40__PLANE_I16, f.width, f.height, J40__PLANE_FORCE_PAD, &f.gmodular.channel[i]))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
+        do { if (J40_UNLIKELY(j40__init_plane( st, J40__PLANE_I16, f.width, f.height, J40__PLANE_FORCE_PAD, &f.gmodular.channel[cast(int)i]))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
     }
     for (i = 0; i < f.num_lf_groups; ++i) {
-        j40__dequant_hf(st, &ggs[i]);
-        do { if (J40_UNLIKELY(j40__combine_vardct_from_lf_group(st, &ggs[i]))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
+        j40__dequant_hf(st, &ggs[cast(int)i]);
+        do { if (J40_UNLIKELY(j40__combine_vardct_from_lf_group(st, &ggs[cast(int)i]))) { assert(st.err); goto J40__ON_ERROR; } } while (0);
     }
 
 J40__ON_ERROR:
@@ -8480,7 +8481,7 @@ void j40__free_inner(j40__inner *inner)
     j40__free_image_state(&inner.image);
     j40__free_frame_state(&inner.frame);
     if (inner.lf_groups) {
-        for (i = 0; i < num_lf_groups; ++i) j40__free_lf_group(&inner.lf_groups[i]);
+        for (i = 0; i < num_lf_groups; ++i) j40__free_lf_group(&inner.lf_groups[cast(int)i]);
         free(inner.lf_groups);
     }
     j40__free_toc(&inner.toc);
