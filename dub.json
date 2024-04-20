@@ -29,6 +29,11 @@
                           "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX" ]
         },
         {
+            "name": "hipreme",
+           "versions": [ "decodeJPEG", "decodePNG",
+                                                                                                                      "encodeBMP"              ]
+        },
+        {
             "name": "no-codecs",
             "versions": [  ]
         }
