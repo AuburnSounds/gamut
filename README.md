@@ -12,6 +12,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 
 - PNG: 8-bit and 16-bit, L/LA/RGB/RGBA
 - JPEG: 8-bit, L/RGB/RGBA, baseline and progressive
+- JPEG XL: 8-bit, RGB (no alpha support), encoded with `cjxl -e 4` or lower
 - TGA: 8-bit, indexed, L/LA/RGB/RGBA
 - GIF: indexed, animation support
 - BMP: indexed 1/4/8-bit no-RLE, 8-bit RGB/RGBA 
@@ -33,6 +34,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 
 ## Changelog
 
+- **v2.6.y** Added JPEG XL input. 8-bit, no alpha, `cjxl --effort 4` or lower, raw streams not ISO BMFF.
 - **v2.5.y** Added BMP input.
 - **v2.4.y** Added BMP output.
 - **v2.3.y** Added GIF input and GIF output. Added multilayer images.
