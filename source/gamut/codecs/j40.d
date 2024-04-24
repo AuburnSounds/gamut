@@ -1586,7 +1586,7 @@ j40_err j40__refill_buffer(j40__st *st)
 
     // trim the committed portion from the backing buffer
     if (checkpoint.ptr > buffer.buf) {
-        long committed_size = (long) (checkpoint.ptr - buffer.buf);
+        long committed_size = cast(long) (checkpoint.ptr - buffer.buf);
         assert(committed_size <= buffer.size); // so committed_size can't overflow
         // this also can't overflow, because buffer.size never exceeds SIZE_MAX
         memmove(buffer.buf, checkpoint.ptr, cast(size_t) (buffer.size - committed_size));
@@ -1882,7 +1882,7 @@ float j40__f16(j40__st *st) {
         j40__set_error(st, J40__4("!fin"));
         return 0.0f;
     }
-    return (bits >> 15 ? -1 : 1) * ldexpf((float) ((bits & 0x3ff) | (biased_exp > 0 ? 0x400 : 0)), biased_exp - 25);
+    return (bits >> 15 ? -1 : 1) * ldexpf(cast(float) ((bits & 0x3ff) | (biased_exp > 0 ? 0x400 : 0)), biased_exp - 25);
 }
 
 int j40__u8(j40__st *st) { // ANS distribution decoding only
@@ -1948,8 +1948,8 @@ j40_err j40__prefix_code_tree(
     // layer 0 (fixed): up to 4 bits, decoding into 0..5, used L1SIZE = 18 times
     // layer 1: up to 5 bits, decoding into 0..17, used l2size times
     // layer 2: up to 15 bits, decoding into 0..l2size-1
-    enum { L1SIZE = 18, L0MAXLEN = 4, L1MAXLEN = 5, L2MAXLEN = 15 };
-    enum { L1CODESUM = 1 << L1MAXLEN, L2CODESUM = 1 << L2MAXLEN };
+    enum { L1SIZE = 18, L0MAXLEN = 4, L1MAXLEN = 5, L2MAXLEN = 15 }
+    enum { L1CODESUM = 1 << L1MAXLEN, L2CODESUM = 1 << L2MAXLEN }
     static immutable int[1 << L0MAXLEN] L0TABLE = [
         0x00002, 0x40002, 0x30002, 0x20003, 0x00002, 0x40002, 0x30002, 0x10004,
         0x00002, 0x40002, 0x30002, 0x20003, 0x00002, 0x40002, 0x30002, 0x50004,
@@ -2553,8 +2553,8 @@ j40_err j40__ans_table(j40__st *st, int log_alpha_size, short **outtable)
 
     case 2: { // false . true case: evenly distribute to first `alpha_size` entries
         int alpha_size = j40__u8(st) + 1;
-        short d = (short) (DISTSUM / alpha_size);
-        short bias_size = (short) (DISTSUM % alpha_size);
+        short d = cast(short) (DISTSUM / alpha_size);
+        short bias_size = cast(short) (DISTSUM % alpha_size);
         do { if (J40_UNLIKELY(st.err)) goto J40__ON_ERROR; if (J40_UNLIKELY((alpha_size <= table_size) == 0)) { j40__set_error(st, J40__4("ansd")); goto J40__ON_ERROR; } } while (0);
         for (i = 0; i < bias_size; ++i) D[i] = cast(short) (d + 1);
         for (; i < alpha_size; ++i) D[i] = d;
@@ -3193,8 +3193,8 @@ j40_err j40__image_metadata(j40__st *st)
             }
             cspace_t cspace;
 
-            enum { WP_D65 = 1, WP_CUSTOM = 2, WP_E = 10, WP_DCI = 11 };
-            enum { PR_SRGB = 1, PR_CUSTOM = 2, PR_2100 = 9, PR_P3 = 11 };
+            enum { WP_D65 = 1, WP_CUSTOM = 2, WP_E = 10, WP_DCI = 11 }
+            enum { PR_SRGB = 1, PR_CUSTOM = 2, PR_2100 = 9, PR_P3 = 11 }
             im.want_icc = j40__u(st, 1);
             cspace = cast(cspace_t) j40__enum(st);
             switch (cspace) 
@@ -3330,7 +3330,7 @@ ulong j40__icc_varint(j40__st *st, ulong *index, ulong size, j40__code_st *code)
             return 0;  
         }
         b = j40__code(st, 0, 0, code);
-        value |= (ulong) (b & 0x7f) << shift;
+        value |= cast(ulong) (b & 0x7f) << shift;
         if (b < 128) return value;
         shift += 7;
     } while (shift < 63);
@@ -3817,8 +3817,8 @@ j40_err j40__modular_header(
                 i += num_sq - 1;
                 m.nb_transforms += num_sq - 1;
             }
-            do { j40__set_error(st, J40__4("TODO: squeeze channel effects")); goto J40__ON_ERROR; } while (0);
-            break;
+            j40__set_error(st, J40__4("TODO: squeeze channel effects")); 
+            goto J40__ON_ERROR;
         }
 
         default: do { j40__set_error(st, J40__4("xfm?")); goto J40__ON_ERROR; } while (0);
@@ -3871,7 +3871,7 @@ J40__ON_ERROR:
 
 j40_err j40__allocate_modular(j40__st *st, j40__modular *m) 
 {
-    ubyte pixel_type = (ubyte) (st.image.modular_16bit_buffers ? J40__PLANE_I16 : J40__PLANE_I32);
+    ubyte pixel_type = cast(ubyte) (st.image.modular_16bit_buffers ? J40__PLANE_I16 : J40__PLANE_I32);
     int i;
     for (i = 0; i < m.num_channels; ++i) {
         j40__plane *c = &m.channel[i];
@@ -4516,7 +4516,7 @@ j40_err j40__inverse_paletteP(int P)(j40__st *st,
                 int is_delta = idx < tr.pal.nb_deltas;
                 if (idx < 0) { // hard-coded delta for first 3 channels, otherwise 0
                     if (i < 3) {
-                        idx = (intP_t) (~idx % 143); // say no to 1's complement
+                        idx = cast(intP_t) (~cast(int)idx % 143); // say no to 1's complement
                         val = J40__PALETTE_DELTAS[idx + 1][i];
                         if (bpp > 8) val =  cast(intP_t) (val << (j40__min32(bpp, 24) - 8));
                     } else {
@@ -4575,8 +4575,16 @@ j40_err j40__inverse_transform(j40__st *st, j40__modular *m)
             switch (tr.tr) 
             {
             case J40__TR_RCT: j40__inverse_rctP!16(m, tr); break;
-            case J40__TR_PALETTE: do { if (J40_UNLIKELY(j40__inverse_paletteP!16(st, m, tr))) { assert(st.err); goto J40__ON_ERROR; } } while (0); break;
-            case J40__TR_SQUEEZE: do { j40__set_error(st, J40__4("TODO: squeeze inverse transformation")); goto J40__ON_ERROR; } while (0); break;
+            case J40__TR_PALETTE: 
+                if (J40_UNLIKELY(j40__inverse_paletteP!16(st, m, tr))) 
+                { 
+                    assert(st.err); 
+                    goto J40__ON_ERROR; 
+                }
+                break;
+            case J40__TR_SQUEEZE: 
+                j40__set_error(st, J40__4("TODO: squeeze inverse transformation")); 
+                goto J40__ON_ERROR;
             default: J40__UNREACHABLE();
             }
         }
@@ -4589,8 +4597,17 @@ j40_err j40__inverse_transform(j40__st *st, j40__modular *m)
             switch (tr.tr) 
             {
             case J40__TR_RCT: j40__inverse_rctP!32(m, tr); break;
-            case J40__TR_PALETTE: do { if (J40_UNLIKELY(j40__inverse_paletteP!32(st, m, tr))) { assert(st.err); goto J40__ON_ERROR; } } while (0); break;
-            case J40__TR_SQUEEZE: do { j40__set_error(st, J40__4("TODO: squeeze inverse transformation")); goto J40__ON_ERROR; } while (0); break;
+            case J40__TR_PALETTE: 
+                if (J40_UNLIKELY(j40__inverse_paletteP!32(st, m, tr))) 
+                { 
+                    assert(st.err); 
+                    goto J40__ON_ERROR;
+                }
+                break;
+            case J40__TR_SQUEEZE: 
+                j40__set_error(st, J40__4("TODO: squeeze inverse transformation")); 
+                goto J40__ON_ERROR;
+            
             default: J40__UNREACHABLE();
             }
         }
@@ -4895,7 +4912,7 @@ void j40__dct_quant_weights(int rows, int columns,
                             int len, 
                             j40_f32x4 *out_) 
 {
-    float inv_rows_m1 = 1.0f / (float) (rows - 1), inv_columns_m1 = 1.0f / (float) (columns - 1);
+    float inv_rows_m1 = 1.0f / cast(float) (rows - 1), inv_columns_m1 = 1.0f / cast(float) (columns - 1);
     int x, y, c;
     for (c = 0; c < 3; ++c) {
         for (y = 0; y < rows; ++y) for (x = 0; x < columns; ++x) {
@@ -5355,11 +5372,11 @@ j40_err j40__frame_header(j40__st *st)
         f.type = cast(j40__frame_type) j40__u(st, 2);
         f.is_modular = j40__u(st, 1);
         flags = j40__u64(st);
-        f.has_noise = (int) (flags & 1);
-        f.has_patches = (int) (flags >> 1 & 1);
-        f.has_splines = (int) (flags >> 4 & 1);
-        f.use_lf_frame = (int) (flags >> 5 & 1);
-        f.skip_adapt_lf_smooth = (int) (flags >> 7 & 1);
+        f.has_noise = cast(int) (flags & 1);
+        f.has_patches = cast(int) (flags >> 1 & 1);
+        f.has_splines = cast(int) (flags >> 4 & 1);
+        f.use_lf_frame = cast(int) (flags >> 5 & 1);
+        f.skip_adapt_lf_smooth = cast(int) (flags >> 7 & 1);
         if (!im.xyb_encoded) f.do_ycbcr = j40__u(st, 1);
         if (!f.use_lf_frame) {
             if (f.do_ycbcr) f.jpeg_upsampling = j40__u(st, 6); // yes, we are lazy
@@ -5713,7 +5730,7 @@ j40_err j40__read_toc(j40__st *st, j40__toc *toc) {
                 long ggidx = cast(long) ggrow * f.ggcolumns + ggcolumn, ggsection = 1 + ggidx;
                 long ggcodeoff = sections[cast(int)ggsection].codeoff;
                 long gsection_base =
-                    1 + f.num_lf_groups + 1 + (long) (ggrow * 8) * f.gcolumns + (ggcolumn * 8);
+                    1 + f.num_lf_groups + 1 + cast(long) (ggrow * 8) * f.gcolumns + (ggcolumn * 8);
                 int grows_in_gg = j40__min32((ggrow + 1) * 8, f.grows) - ggrow * 8;
                 int gcolumns_in_gg = j40__min32((ggcolumn + 1) * 8, f.gcolumns) - ggcolumn * 8;
                 int grow_in_gg, gcolumn_in_gg;
@@ -6785,7 +6802,7 @@ j40_err j40__lf_quant(j40__st *st,
     // extract LfQuant from m and populate lfindices
     for (c = 0; c < 3; ++c) {
         // TODO spec bug: missing 2^16 scaling
-        float mult_lf = f.m_lf_scaled[c] / (float) (f.global_scale * f.quant_lf) * (float) (65536 >> extra_prec);
+        float mult_lf = f.m_lf_scaled[c] / cast(float) (f.global_scale * f.quant_lf) * cast(float) (65536 >> extra_prec);
         channel[c] = &m.channel[YXB2XYB[c]];
         j40__dequant_lf(channel[c], mult_lf, &lfquant[c]);
     }
@@ -7005,7 +7022,7 @@ j40_err j40__lf_group(j40__st *st, j40__lf_group_st *gg) {
 
         
         
-        nb_varblocks = j40__u(st, j40__ceil_lg32((uint) (ggw8 * ggh8))) + 1; 
+        nb_varblocks = j40__u(st, j40__ceil_lg32(cast(uint) (ggw8 * ggh8))) + 1; 
         w[0] = w[1] = ggw64; h[0] = h[1] = ggh64; 
         w[2] = nb_varblocks; h[2] = 2; 
         w[3] = ggw8; h[3] = ggh8; 
@@ -7420,8 +7437,8 @@ j40_err j40__combine_vardct_from_lf_group(j40__st *st, const j40__lf_group_st *g
             }
 
             if (0) { // TODO display borders for the debugging
-                for (x = 0; x < (1<<dct.log_columns); ++x) scratch[x] = 1.0f - (float) ((dctsel >> x) & 1);
-                for (y = 0; y < (1<<dct.log_rows); ++y) scratch[y << dct.log_columns] = 1.0f - (float) ((dctsel >> y) & 1);
+                for (x = 0; x < (1<<dct.log_columns); ++x) scratch[x] = 1.0f - cast(float) ((dctsel >> x) & 1);
+                for (y = 0; y < (1<<dct.log_rows); ++y) scratch[y << dct.log_columns] = 1.0f - cast(float) ((dctsel >> y) & 1);
             }
 
             // reposition samples into the rectangular grid
@@ -7991,8 +8008,8 @@ j40__group_info j40__group_info_(j40__frame_st *f, long gidx)
     row = gidx / f.gcolumns;
     column = gidx % f.gcolumns;
     info.ggidx = (row / 8) * f.ggcolumns + (column / 8);
-    info.gx_in_gg = (int) (column % 8) << shift;
-    info.gy_in_gg = (int) (row % 8) << shift;
+    info.gx_in_gg = cast(int) (column % 8) << shift;
+    info.gy_in_gg = cast(int) (row % 8) << shift;
     info.gw = cast(int) (j40__min64(f.width, (column + 1) << shift) - (column << shift));
     info.gh = cast(int) (j40__min64(f.height, (row + 1) << shift) - (row << shift));
     return info;
