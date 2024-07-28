@@ -45,18 +45,24 @@ int pixelTypeSize(PixelType type) pure
 {
     final switch(type) with (PixelType)
     {
-        case l8:      return 1;
-        case l16:     return 2;
-        case lf32:    return 4;
-        case la8:     return 2;
-        case la16:    return 4;
-        case laf32:   return 8;
-        case rgb8:    return 3;
-        case rgb16:   return 6;
-        case rgba8:   return 4;
-        case rgba16:  return 8;
-        case rgbf32:  return 12;
-        case rgbaf32: return 16;
+        case l8:       return 1;
+        case l16:      return 2;
+        case lf32:     return 4;
+        case la8:      return 2;
+        case la16:     return 4;
+        case laf32:    return 8;
+        case lap8:     return 2;
+        case lap16:    return 4;
+        case lapf32:   return 8;
+        case rgb8:     return 3;
+        case rgb16:    return 6;
+        case rgbf32:   return 12;
+        case rgba8:    return 4;
+        case rgba16:   return 8;
+        case rgbaf32:  return 16;
+        case rgbap8:   return 4;
+        case rgbap16:  return 8;
+        case rgbapf32: return 16;
         case unknown: assert(false);
     }
 }
@@ -74,12 +80,18 @@ int pixelTypeNumChannels(PixelType type) pure
         case la8:     return 2;
         case la16:    return 2;
         case laf32:   return 2;
+        case lap8:    return 2;
+        case lap16:   return 2;
+        case lapf32:  return 2;
         case rgb8:    return 3;
         case rgb16:   return 3;
         case rgbf32:  return 3;
         case rgba8:   return 4;
         case rgba16:  return 4;
         case rgbaf32: return 4;
+        case rgbap8:  return 4;
+        case rgbap16: return 4;
+        case rgbapf32:return 4;
         case unknown: assert(false);
     }
 }
@@ -554,6 +566,7 @@ bool validLoadFlags(LoadFlags loadFlags) pure
 {
     if ((loadFlags & LOAD_GREYSCALE) && (loadFlags & LOAD_RGB)) return false;
     if ((loadFlags & LOAD_ALPHA) && (loadFlags & LOAD_NO_ALPHA)) return false;
+    if ((loadFlags & LOAD_PREMUL) && (loadFlags & LOAD_NO_PREMUL)) return false;
 
     int bitnessFlags = 0;
     if (loadFlags & LOAD_8BIT) ++bitnessFlags;
@@ -639,6 +652,12 @@ PixelType applyLoadFlags(PixelType type, LoadFlags flags)
 
     if (flags & LOAD_FP32)
         type = convertPixelTypeToFP32(type);
+
+    if (flags & LOAD_PREMUL)
+        type = convertPixelTypeToPremul(type);
+
+    if (flags & LOAD_NO_PREMUL)
+        type = convertPixelTypeToNoPremul(type);
 
     return type;
 }

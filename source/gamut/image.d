@@ -1093,6 +1093,20 @@ public:
         return convertTo( convertPixelTypeToDropAlphaChannel(_type), layoutConstraints);
     }
 
+    /// Change the type to alpha-premultiplied, if any available. No effect if no alpha.
+    /// Tags: #valid
+    bool premultiply(LayoutConstraints layoutConstraints = LAYOUT_DEFAULT)
+    {
+        return convertTo( convertPixelTypeToPremul(_type), layoutConstraints);
+    }
+
+    /// Change the type to NOT alpha-premultiplied, if any available. No effect if no alpha.
+    /// Tags: #valid
+    bool unpremultiply(LayoutConstraints layoutConstraints = LAYOUT_DEFAULT)
+    {
+        return convertTo( convertPixelTypeToNoPremul(_type), layoutConstraints);
+    }
+
     /// Convert the image bit-depth to 8-bit per component.
     /// Tags: #valid
     bool convertTo8Bit(LayoutConstraints layoutConstraints = LAYOUT_DEFAULT)
@@ -2013,12 +2027,18 @@ void convertToIntermediateScanline(PixelType srcType,
             case la8:     scanline_convert_la8_to_rgbaf32    (src, dest, width); break;
             case la16:    scanline_convert_la16_to_rgbaf32   (src, dest, width); break;
             case laf32:   scanline_convert_laf32_to_rgbaf32  (src, dest, width); break;
+            case lap8:    scanline_convert_lap8_to_rgbaf32    (src, dest, width); break;
+            case lap16:   scanline_convert_lap16_to_rgbaf32   (src, dest, width); break;
+            case lapf32:  scanline_convert_lapf32_to_rgbaf32  (src, dest, width); break;
             case rgb8:    scanline_convert_rgb8_to_rgbaf32   (src, dest, width); break;
             case rgb16:   scanline_convert_rgb16_to_rgbaf32  (src, dest, width); break;
             case rgbf32:  scanline_convert_rgbf32_to_rgbaf32 (src, dest, width); break;
             case rgba8:   scanline_convert_rgba8_to_rgbaf32  (src, dest, width); break;
             case rgba16:  scanline_convert_rgba16_to_rgbaf32 (src, dest, width); break;
             case rgbaf32: scanline_convert_rgbaf32_to_rgbaf32(src, dest, width); break;
+            case rgbap8:  scanline_convert_rgbap8_to_rgbaf32  (src, dest, width); break;
+            case rgbap16: scanline_convert_rgbap16_to_rgbaf32 (src, dest, width); break;
+            case rgbapf32:scanline_convert_rgbapf32_to_rgbaf32(src, dest, width); break;
         }
     }
     else
@@ -2052,12 +2072,18 @@ void convertFromIntermediate(PixelType srcType, const(ubyte)* src, PixelType dst
             case la8:     scanline_convert_rgbaf32_to_la8    (src, dest, width); break;
             case la16:    scanline_convert_rgbaf32_to_la16   (src, dest, width); break;
             case laf32:   scanline_convert_rgbaf32_to_laf32  (src, dest, width); break;
+            case lap8:    scanline_convert_rgbaf32_to_lap8    (src, dest, width); break;
+            case lap16:   scanline_convert_rgbaf32_to_lap16   (src, dest, width); break;
+            case lapf32:  scanline_convert_rgbaf32_to_lapf32  (src, dest, width); break;
             case rgb8:    scanline_convert_rgbaf32_to_rgb8   (src, dest, width); break;
             case rgb16:   scanline_convert_rgbaf32_to_rgb16  (src, dest, width); break;
             case rgbf32:  scanline_convert_rgbaf32_to_rgbf32 (src, dest, width); break;
             case rgba8:   scanline_convert_rgbaf32_to_rgba8  (src, dest, width); break;
             case rgba16:  scanline_convert_rgbaf32_to_rgba16 (src, dest, width); break;
             case rgbaf32: scanline_convert_rgbaf32_to_rgbaf32(src, dest, width); break;
+            case rgbap8:  scanline_convert_rgbaf32_to_rgbap8  (src, dest, width); break;
+            case rgbap16: scanline_convert_rgbaf32_to_rgbap16 (src, dest, width); break;
+            case rgbapf32:scanline_convert_rgbaf32_to_rgbapf32(src, dest, width); break;
         }
     }
     else
@@ -2109,6 +2135,8 @@ unittest
     assert(!image.isPlanar());
     assert(!image.isCompressed());
     assert(image.hasNonZeroSize());
+    image.premultiply();
+    assert(image.type() == PixelType.rgbap8);
 }
 
 // Semantics for image with plain pixels
@@ -2132,7 +2160,7 @@ unittest
 }
 
 // Semantics for zero initialization
- @trusted unittest
+@trusted unittest
 {
     // Create with initialization and a border. Every pixel should be zero, including border.
     Image image;
@@ -2418,5 +2446,5 @@ unittest
     ];
     image2.flipHorizontal();
     assert(image2.allPixelsAtOnce() == pixelsFlippedHorz[]);
-
 }
+

@@ -218,6 +218,59 @@ void scanline_convert_laf32_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int
     }
 }
 
+
+void scanline_convert_lap8_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(ubyte)* s = inScan;
+    float* outp = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float b = *s++ / 255.0f;
+        float a = *s++ / 255.0f;
+        if (a != 0)
+            b /= a;
+        *outp++ = b;
+        *outp++ = b;
+        *outp++ = b;
+        *outp++ = a;
+    }
+}
+
+void scanline_convert_lap16_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(ushort)* s = cast(const(ushort)*) inScan;
+    float* outp = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float b = *s++ / 65535.0f;
+        float a = *s++ / 65535.0f;
+        if (a != 0)
+            b /= a;
+        *outp++ = b;
+        *outp++ = b;
+        *outp++ = b;
+        *outp++ = a;
+    }
+}
+
+void scanline_convert_lapf32_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* s = cast(const(float)*) inScan;
+    float* outp = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float b = *s++;
+        float a = *s++;
+        if (a != 0)
+            b /= a;
+        *outp++ = b;
+        *outp++ = b;
+        *outp++ = b;
+        *outp++ = a;
+    }
+}
+
+
 void scanline_convert_rgb8_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
 {
     const(ubyte)* s = inScan;
@@ -300,6 +353,78 @@ void scanline_convert_rgba16_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, in
     }
 }
 
+void scanline_convert_rgbap8_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(ubyte)* s = inScan;
+    float* outp = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float r = *s++ / 255.0f;
+        float g = *s++ / 255.0f;
+        float b = *s++ / 255.0f;
+        float a = *s++ / 255.0f;
+        if (a != 0)
+        {
+            r /= a;
+            g /= a;
+            b /= a;
+        }
+        *outp++ = r;
+        *outp++ = g;
+        *outp++ = b;
+        *outp++ = a;
+    }
+}
+
+void scanline_convert_rgbap16_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(ushort)* s = cast(const(ushort)*) inScan;
+    float* outp = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float r = *s++ / 65535.0f;
+        float g = *s++ / 65535.0f;
+        float b = *s++ / 65535.0f;
+        float a = *s++ / 65535.0f;
+        if (a != 0)
+        {
+            r /= a;
+            g /= a;
+            b /= a;
+        }
+        *outp++ = r;
+        *outp++ = g;
+        *outp++ = b;
+        *outp++ = a;
+    }
+}
+
+void scanline_convert_rgbapf32_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* s = cast(const(float)*) inScan;
+    float* outp = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float r = *s++;
+        float g = *s++;
+        float b = *s++;
+        float a = *s++;
+        if (a != 0)
+        {
+            r /= a;
+            g /= a;
+            b /= a;
+        }
+        *outp++ = r;
+        *outp++ = g;
+        *outp++ = b;
+        *outp++ = a;
+    }
+}
+
+
+
+
 //
 // FROM rgbaf32 TO xxxx
 //
@@ -380,6 +505,52 @@ void scanline_convert_rgbaf32_to_laf32(const(ubyte)* inScan, ubyte* outScan, int
     for (int x = 0; x < width; ++x)
     {
         float b = (inp[4*x+0] + inp[4*x+1] + inp[4*x+2]) / 3.0f;
+        float a = inp[4*x+3];
+        *s++ = b;
+        *s++ = a;
+    }
+}
+
+
+/// Convert a row of pixel from RGBA 32-bit float (0 to 1.0) to LA 16-bit (0 to 65535) premultiplied.
+void scanline_convert_rgbaf32_to_lap8(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    // Issue #21, workaround for DMD optimizer. Not sure if this one useful.
+    version(DigitalMars) pragma(inline, false);
+
+    const(float)* inp = cast(const(float)*)inScan; 
+    ubyte* s = outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        ubyte b = cast(ubyte)(0.5f + (inp[4*x+0] + inp[4*x+1] + inp[4*x+2]) * inp[4*x+3] * 255.0f / 3.0f);
+        ubyte a = cast(ubyte)(0.5f + inp[4*x+3] * 255.0f);
+        *s++ = b;
+        *s++ = a;
+    }
+}
+
+/// Convert a row of pixel from RGBA 32-bit float (0 to 1.0) to LA 16-bit (0 to 65535) premultiplied.
+void scanline_convert_rgbaf32_to_lap16(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* inp = cast(const(float)*) inScan;
+    ushort* s = cast(ushort*) outScan;    
+    for (int x = 0; x < width; ++x)
+    {
+        ushort b = cast(ushort)(0.5f + (inp[4*x+0] + inp[4*x+1] + inp[4*x+2]) * inp[4*x+3] * 65535.0f / 3.0f);
+        ushort a = cast(ushort)(0.5f + inp[4*x+3] * 65535.0f);
+        *s++ = b;
+        *s++ = a;
+    }
+}
+
+/// Convert a row of pixel from RGBA 32-bit float (0 to 1) to LA 32-bit float (0 to 1) premultiplied.
+void scanline_convert_rgbaf32_to_lapf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* inp = cast(const(float)*) inScan;
+    float* s = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float b = (inp[4*x+0] + inp[4*x+1] + inp[4*x+2]) * inp[4*x+3] / 3.0f;
         float a = inp[4*x+3];
         *s++ = b;
         *s++ = a;
@@ -473,6 +644,58 @@ void scanline_convert_rgbaf32_to_rgbaf32(const(ubyte)* inScan, ubyte* outScan, i
 {
     memcpy(outScan, inScan, width * 4 * float.sizeof);
 }
+
+/// Convert a row of pixel from RGBA 32-bit float (0 to 1) to RGBA 8-bit (0 to 255) premultiplied.
+void scanline_convert_rgbaf32_to_rgbap8(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* inp = cast(const(float)*) inScan;
+    ubyte* s = outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        ubyte r = cast(ubyte)(0.5f + inp[4*x+0] * inp[4*x+3] * 255.0f);
+        ubyte g = cast(ubyte)(0.5f + inp[4*x+1] * inp[4*x+3] * 255.0f);
+        ubyte b = cast(ubyte)(0.5f + inp[4*x+2] * inp[4*x+3] * 255.0f);
+        ubyte a = cast(ubyte)(0.5f + inp[4*x+3] * 255.0f);
+        *s++ = r;
+        *s++ = g;
+        *s++ = b;
+        *s++ = a;
+    }
+}
+
+/// Convert a row of pixel from RGBA 32-bit float (0 to 1) to RGBA 16-bit (0 to 65535) premultiplied.
+void scanline_convert_rgbaf32_to_rgbap16(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* inp = cast(const(float)*) inScan;
+    ushort* s = cast(ushort*)outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        ushort r = cast(ushort)(0.5f + inp[4*x+0] * inp[4*x+3] * 65535.0f);
+        ushort g = cast(ushort)(0.5f + inp[4*x+1] * inp[4*x+3] * 65535.0f);
+        ushort b = cast(ushort)(0.5f + inp[4*x+2] * inp[4*x+3] * 65535.0f);
+        ushort a = cast(ushort)(0.5f + inp[4*x+3] * 65535.0f);
+        *s++ = r;
+        *s++ = g;
+        *s++ = b;
+        *s++ = a;
+    }
+}
+
+/// Convert a row of pixel from RGBA 32-bit float (0 to 1) to RGBA 32-bit float (0 to 1) premultiplied.
+void scanline_convert_rgbaf32_to_rgbapf32(const(ubyte)* inScan, ubyte* outScan, int width, void* userData = null)
+{
+    const(float)* inp = cast(const(float)*) inScan;
+    float* s = cast(float*) outScan;
+    for (int x = 0; x < width; ++x)
+    {
+        float a = inp[4*x+3];
+        *s++ = inp[4*x+0] * a;
+        *s++ = inp[4*x+1] * a;
+        *s++ = inp[4*x+2] * a;
+        *s++ = a;
+    }
+}
+
 
 
 //

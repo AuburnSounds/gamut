@@ -40,6 +40,10 @@ enum PixelType
     la16,         /// 32-bit Luminance Alpha image: 2 x unsigned 16-bit
     laf32,        /// 64-bit Luminance Alpha image: 2 x 32-bit IEEE floating point
 
+    lap8,         /// 16-bit Luminance Alpha image: 2 x unsigned 8-bit, premultiplied
+    lap16,        /// 32-bit Luminance Alpha image: 2 x unsigned 16-bit, premultiplied
+    lapf32,       /// 64-bit Luminance Alpha image: 2 x 32-bit IEEE floating point, premultiplied
+
     rgb8,         /// 24-bit RGB image: 3 x unsigned 8-bit
     rgb16,        /// 48-bit RGB image: 3 x unsigned 16-bit
     rgbf32,       /// 96-bit RGB float image: 3 x 32-bit IEEE floating point
@@ -47,6 +51,10 @@ enum PixelType
     rgba8,        /// 32-bit RGBA image: 4 x unsigned 8-bit
     rgba16,       /// 64-bit RGBA image: 4 x unsigned 16-bit    
     rgbaf32,      /// 128-bit RGBA float image: 4 x 32-bit IEEE floating point
+
+    rgbap8,       /// 32-bit RGBA image: 4 x unsigned 8-bit, premultiplied
+    rgbap16,      /// 64-bit RGBA image: 4 x unsigned 16-bit, premultiplied    
+    rgbapf32      /// 128-bit RGBA float image: 4 x 32-bit IEEE floating point, premultiplied
 }
 
 
@@ -111,29 +119,29 @@ enum LoadFlags LOAD_NORMAL          = 0;
 /// This will preserve an alpha channel, if existing.
 /// The resulting image will have 1 or 2 channels.
 /// Can't be used with `LOAD_RGB` flag.
-enum LoadFlags LOAD_GREYSCALE       = 0x10000;
+enum LoadFlags LOAD_GREYSCALE       = 0x1_0000;
 
 /// Load the image in RGB, can be faster than loading a greyscale image and then converting it RGB.
 /// The resulting image will have 3 or 4 channels.
 /// Can't be used with `LOAD_GREYSCALE`.
-enum LoadFlags LOAD_RGB             = 0x80000; 
+enum LoadFlags LOAD_RGB             = 0x8_0000; 
 
 
 /// Load the image and adds an alpha channel (opaque if not existing).
 /// This will preserve the color channels.
 /// The resulting image will have 2 or 4 channels.
 /// Can't be used with `LOAD_NO_ALPHA` flag.
-enum LoadFlags LOAD_ALPHA           = 0x20000;
+enum LoadFlags LOAD_ALPHA           = 0x2_0000;
 
 /// Load the image and drops an eventual alpha channel, if it exists.
 /// The resulting image will have 1 or 3 channels.
 /// Can't be used with `LOAD_ALPHA` flag.
-enum LoadFlags LOAD_NO_ALPHA        = 0x40000;
+enum LoadFlags LOAD_NO_ALPHA        = 0x4_0000;
 
 
 /// Load the image directly in 8-bit, can be faster than loading as 16-bit PNG and then converting to 8-bit.
 /// Can't be used with `LOAD_10BIT` or `LOAD_FP32` flag.
-enum LoadFlags LOAD_8BIT            = 0x100000;
+enum LoadFlags LOAD_8BIT            = 0x10_0000;
 
 /// Load the image directly in 16-bit, can be faster than loading as 8-bit PNG and then converting to 16-bit.
 /// Can't be used with `LOAD_8BIT` or `LOAD_FP32` flag.
@@ -142,12 +150,21 @@ enum LoadFlags LOAD_16BIT           = 0x200000;
 /// Load the image directly in 32-bit floating point.
 /// Probably the same speed as just calling `convertToFP32` after load though.
 /// Can't be used with `LOAD_8BIT` or `LOAD_10BIT` flag.
-enum LoadFlags LOAD_FP32           = 0x400000;
+enum LoadFlags LOAD_FP32            = 0x40_0000;
 
 
 /// Only decode metadata, not the pixels themselves.
 /// NOT SUPPORTED YET!
-enum LoadFlags LOAD_NO_PIXELS       = 0x800000;
+enum LoadFlags LOAD_NO_PIXELS       = 0x80_0000;
+
+/// Load the image and premultiply by alpha, if it exists.
+/// This may loose information.
+/// Can't be used with `LOAD_NO_PREMUL` flag.
+enum LoadFlags LOAD_PREMUL          = 0x100_0000;
+
+/// Load the image and un-premultiply by alpha, if it exists.
+/// Can't be used with `LOAD_PREMUL` flag.
+enum LoadFlags LOAD_NO_PREMUL       = 0x200_0000;
 
 
 
@@ -264,12 +281,18 @@ PixelType convertPixelTypeToGreyscale(PixelType type) pure
         case la8:     t = la8; break;
         case la16:    t = la16; break;
         case laf32:   t = laf32; break;
+        case lap8:    t = lap8; break;
+        case lap16:   t = lap16; break;
+        case lapf32:  t = lapf32; break;
         case rgb8:    t = l8; break;
         case rgb16:   t = l16; break;
         case rgbf32:  t = lf32; break;
         case rgba8:   t = la8; break;
         case rgba16:  t = la16; break;
         case rgbaf32: t = laf32; break;
+        case rgbap8:  t = lap8; break;
+        case rgbap16: t = lap16; break;
+        case rgbapf32:t = lapf32; break;
     }
     return t;
 }
@@ -286,12 +309,18 @@ PixelType convertPixelTypeToRGB(PixelType type) pure
         case la8:     t = rgba8; break;
         case la16:    t = rgba16; break;
         case laf32:   t = rgbaf32; break;
+        case lap8:    t = rgbap8; break;
+        case lap16:   t = rgbap16; break;
+        case lapf32:  t = rgbapf32; break;
         case rgb8:    t = rgb8; break;
         case rgb16:   t = rgb16; break;
         case rgbf32:  t = rgbf32; break;
         case rgba8:   t = rgba8; break;
         case rgba16:  t = rgba16; break;
         case rgbaf32: t = rgbaf32; break;
+        case rgbap8:  t = rgbap8; break;
+        case rgbap16: t = rgbap16; break;
+        case rgbapf32:t = rgbapf32; break;
     }
     return t;
 }
@@ -308,12 +337,18 @@ PixelType convertPixelTypeToAddAlphaChannel(PixelType type) pure
         case la8:     t = la8; break;
         case la16:    t = la16; break;
         case laf32:   t = laf32; break;
+        case lap8:    t = lap8; break;
+        case lap16:   t = lap16; break;
+        case lapf32:  t = lapf32; break;
         case rgb8:    t = rgba8; break;
         case rgb16:   t = rgba16; break;
         case rgbf32:  t = rgbaf32; break;
         case rgba8:   t = rgba8; break;
         case rgba16:  t = rgba16; break;
         case rgbaf32: t = rgbaf32; break;
+        case rgbap8:  t = rgbap8; break;
+        case rgbap16: t = rgbap16; break;
+        case rgbapf32:t = rgbapf32; break;
     }
     return t;
 }
@@ -330,19 +365,81 @@ PixelType convertPixelTypeToDropAlphaChannel(PixelType type) pure
         case la8:     t = l8; break;
         case la16:    t = l16; break;
         case laf32:   t = lf32; break;
+        case lap8:    t = l8; break;
+        case lap16:   t = l16; break;
+        case lapf32:  t = lf32; break;
         case rgb8:    t = rgb8; break;
         case rgb16:   t = rgb16; break;
         case rgbf32:  t = rgbf32; break;
         case rgba8:   t = rgb8; break;
         case rgba16:  t = rgb16; break;
         case rgbaf32: t = rgbf32; break;
+        case rgbap8:   t = rgb8; break;
+        case rgbap16:  t = rgb16; break;
+        case rgbapf32: t = rgbf32; break;
+    }
+    return t;
+}
+
+PixelType convertPixelTypeToPremul(PixelType type) pure
+{
+    PixelType t = PixelType.unknown;
+    final switch(type) with (PixelType)
+    {
+        case unknown: t = unknown; break;
+        case l8:      t = l8; break;
+        case l16:     t = l16; break;
+        case lf32:    t = lf32; break;
+        case la8:     t = lap8; break;
+        case la16:    t = lap16; break;
+        case laf32:   t = lapf32; break;
+        case lap8:    t = lap8; break;
+        case lap16:   t = lap16; break;
+        case lapf32:  t = lapf32; break;
+        case rgb8:    t = rgb8; break;
+        case rgb16:   t = rgb16; break;
+        case rgbf32:  t = rgbf32; break;
+        case rgba8:   t = rgbap8; break;
+        case rgba16:  t = rgbap16; break;
+        case rgbaf32: t = rgbapf32; break;
+        case rgbap8:  t = rgbap8; break;
+        case rgbap16: t = rgbap16; break;
+        case rgbapf32:t = rgbapf32; break;
+    }
+    return t;
+}
+
+PixelType convertPixelTypeToNoPremul(PixelType type) pure
+{
+    PixelType t = PixelType.unknown;
+    final switch(type) with (PixelType)
+    {
+        case unknown: t = unknown; break;
+        case l8:      t = l8; break;
+        case l16:     t = l16; break;
+        case lf32:    t = lf32; break;
+        case la8:     t = la8; break;
+        case la16:    t = la16; break;
+        case laf32:   t = laf32; break;
+        case lap8:    t = la8; break;
+        case lap16:   t = la16; break;
+        case lapf32:  t = laf32; break;
+        case rgb8:    t = rgb8; break;
+        case rgb16:   t = rgb16; break;
+        case rgbf32:  t = rgbf32; break;
+        case rgba8:   t = rgba8; break;
+        case rgba16:  t = rgba16; break;
+        case rgbaf32: t = rgbaf32; break;
+        case rgbap8:  t = rgba8; break;
+        case rgbap16: t = rgba16; break;
+        case rgbapf32:t = rgbaf32; break;
     }
     return t;
 }
 
 PixelType convertPixelTypeTo8Bit(PixelType type) pure
 {
-    PixelType t = PixelType.unknown;       
+    PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
     {
         case unknown: t = unknown; break;
@@ -352,19 +449,25 @@ PixelType convertPixelTypeTo8Bit(PixelType type) pure
         case la8:     t = la8; break;
         case la16:    t = la8; break;
         case laf32:   t = la8; break;
+        case lap8:    t = lap8; break;
+        case lap16:   t = lap8; break;
+        case lapf32:  t = lap8; break;
         case rgb8:    t = rgb8; break;
         case rgb16:   t = rgb8; break;
         case rgbf32:  t = rgb8; break;
         case rgba8:   t = rgba8; break;
         case rgba16:  t = rgba8; break;
         case rgbaf32: t = rgba8; break;
+        case rgbap8:   t = rgbap8; break;
+        case rgbap16:  t = rgbap8; break;
+        case rgbapf32: t = rgbap8; break;
     }
     return t;
 }
 
 PixelType convertPixelTypeTo16Bit(PixelType type) pure
 {
-    PixelType t = PixelType.unknown;       
+    PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
     {
         case unknown: t = unknown; break;
@@ -374,12 +477,18 @@ PixelType convertPixelTypeTo16Bit(PixelType type) pure
         case la8:     t = la16; break;
         case la16:    t = la16; break;
         case laf32:   t = la16; break;
+        case lap8:    t = lap16; break;
+        case lap16:   t = lap16; break;
+        case lapf32:  t = lap16; break;
         case rgb8:    t = rgb16; break;
         case rgb16:   t = rgb16; break;
         case rgbf32:  t = rgb16; break;
         case rgba8:   t = rgba16; break;
         case rgba16:  t = rgba16; break;
         case rgbaf32: t = rgba16; break;
+        case rgbap8:   t = rgbap16; break;
+        case rgbap16:  t = rgbap16; break;
+        case rgbapf32: t = rgbap16; break;
     }
     return t;
 }
@@ -387,7 +496,7 @@ PixelType convertPixelTypeTo16Bit(PixelType type) pure
 
 PixelType convertPixelTypeToFP32(PixelType type) pure
 {
-    PixelType t = PixelType.unknown;       
+    PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
     {
         case unknown: t = unknown; break;
@@ -397,12 +506,18 @@ PixelType convertPixelTypeToFP32(PixelType type) pure
         case la8:     t = laf32; break;
         case la16:    t = laf32; break;
         case laf32:   t = laf32; break;
+        case lap8:    t = lapf32; break;
+        case lap16:   t = lapf32; break;
+        case lapf32:  t = lapf32; break;
         case rgb8:    t = rgbf32; break;
         case rgb16:   t = rgbf32; break;
         case rgbf32:  t = rgbf32; break;
         case rgba8:   t = rgbaf32; break;
         case rgba16:  t = rgbaf32; break;
         case rgbaf32: t = rgbaf32; break;
+        case rgbap8:  t = rgbapf32; break;
+        case rgbap16: t = rgbapf32; break;
+        case rgbapf32:t = rgbapf32; break;
     }
     return t;
 }

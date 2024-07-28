@@ -105,15 +105,24 @@ Our benchmark results for 8-bit color images:
       l8,
       l16,
       lf32,
+      
       la8,
       la16,
       laf32,
+      lap8,
+      lap16,
+      lapf32,
+
       rgb8, 
       rgb16,
       rgbf32,
+
       rgba8,
       rgba16,
       rgbaf32
+      rgbap8,
+      rgbap16,
+      rgbapf32
   }
   ```
 
@@ -124,6 +133,8 @@ Our benchmark results for 8-bit color images:
   - 4 components is implicitely Red + Green + Blue + Alpha
 
   _**Bit-depth:** Each of these components can be represented in 8-bit, 16-bit, or 32-bit floating-point (0.0f to 1.0f range)._
+
+  _**Alpha premultiplication:** When an alpha channel exist, both premultiplied and non-premultiplied variants exist._
 
 
 
@@ -199,19 +210,22 @@ Another way to create an `Image` is to load an encoded image.
   
   LOAD_ALPHA       // Force one alpha channel.
   LOAD_NO_ALPHA    // Force zero alpha channel.
-  
+
   LOAD_GREYSCALE   // Force greyscale.
   LOAD_RGB         // Force RGB values.
   
   LOAD_8BIT        // Force 8-bit `ubyte` per component.
   LOAD_16BIT       // Force 16-bit `ushort` per component.
   LOAD_FP32        // Force 32-bit `float` per component.
+
+  LOAD_PREMUL      // Force premultiplied alpha representation (if alpha exists)
+  LOAD_NO_PREMUL   // Force non-premultiplied alpha representation (if alpha exists)
   ```
 
   Example:
   ```d
   Image image;  
-  image.loadFromMemory(pngBytes, LOAD_RGB | LOAD_ALPHA | LOAD_8BIT);  // force PixelType.rgba8 
+  image.loadFromMemory(pngBytes, LOAD_RGB | LOAD_ALPHA | LOAD_8BIT | LOAD_NO_PREMUL);  // force PixelType.rgba8 
   ```
   Not all load flags are compatible, for example `LOAD_8BIT` and `LOAD_16BIT` cannot be used together.
     
@@ -236,7 +250,8 @@ Another way to create an `Image` is to load an encoded image.
       QOIX,
       DDS,
       TGA,
-      GIF
+      GIF,
+      JXL
   }
   ```
 
