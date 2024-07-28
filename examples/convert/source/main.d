@@ -13,6 +13,8 @@ void usage()
     writeln("Params:");
     writeln("  -i           Specify an input file");
     writeln("  -b/--bitness Change bitness of file");
+    writeln("  -p/--premul  Encode with premultiplied alpha");
+    writeln("  --unpremul  Encode with unpremultiplied alpha");
     writeln("  -h           Shows this help");
     writeln;
 }
@@ -24,6 +26,8 @@ int main(string[] args)
         string input = null;
         string output = null;
         bool help = false;
+        bool premul = false;
+        bool unpremul = false;
         int bitness = -1; // auto
 
         for(int i = 1; i < args.length; ++i)
@@ -36,6 +40,14 @@ int main(string[] args)
                 else if (args[i] == "16") bitness = 16;
                 else if (args[i] == "auto") bitness = -1;
                 else throw new Exception("Must specify 8, 16, or auto after -bitness");
+            }
+            else if (arg == "-p" || arg == "--premul")
+            {
+                premul = true;                
+            }
+            else if (arg == "-p" || arg == "--unpremul")
+            {
+                unpremul = true;                
             }
             else if (arg == "-h")
             {
@@ -72,16 +84,22 @@ int main(string[] args)
             throw new Exception("Couldn't open file " ~ input);
         }
 
+  
+        if (bitness == 8)
+            image.convertTo8Bit();
+        else if (bitness == 16)
+            image.convertTo16Bit();
+
+        if (premul && unpremul) throw new Exception("Cannot have both --premul and --unpremul");
+        if (premul) image.premultiply();
+        if (unpremul) image.unpremultiply();
+
+
         writefln("Opened %s", input);
         writefln(" - width      = %s", image.width);
         writefln(" - height     = %s", image.height);
         writefln(" - layers     = %s", image.layers);
         writefln(" - type       = %s", image.type);
-
-        if (bitness == 8)
-            image.convertTo8Bit();
-        else if (bitness == 16)
-            image.convertTo16Bit();
 
         bool r = result.saveToFile(output);
         if (!r)
