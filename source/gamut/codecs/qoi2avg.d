@@ -70,6 +70,7 @@ struct qoix_header_t {
 
 enum QOIX_HEADER_OFFSET_CHANNELS = 13;
 enum QOIX_HEADER_OFFSET_BITDEPTH = 14;
+enum QOIX_HEADER_OFFSET_COLORSPACE = 15;
 enum QOIX_HEADER_OFFSET_COMPRESSION = 16;
 
 
@@ -267,8 +268,9 @@ You may use the constants QOI_SRGB or QOI_LINEAR. The colorspace is purely
 informative. It will be saved to the file header, but does not affect
 en-/decoding in any way. */
 
-enum QOI_SRGB = 0;
-enum QOI_LINEAR = 1;
+enum QOIX_SRGB        = 0;
+enum QOIX_LINEAR      = 1;
+enum QOIX_SRGB_PREMUL = 2; // sRGB, premultiplied alpha
 
 struct qoi_desc
 {
@@ -384,7 +386,7 @@ ubyte* qoix_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
         data == null || out_len == null || desc == null ||
         desc.width == 0 || desc.height == 0 ||
         desc.channels < 3 || desc.channels > 4 ||
-        desc.colorspace > 1 ||
+        desc.colorspace > 2 ||
         desc.bitdepth != 8 ||
         desc.compression != QOIX_COMPRESSION_NONE ||
         desc.height >= QOIX_PIXELS_MAX / desc.width
@@ -652,7 +654,7 @@ ubyte* qoix_decode(const(void)* data, int size, qoi_desc *desc, int channels) {
     if (
         desc.width == 0 || desc.height == 0 || 
         desc.channels < 3 || desc.channels > 4 ||
-        desc.colorspace > 1 ||
+        desc.colorspace > 2 ||
         desc.bitdepth != 8 ||
         qoix_version > 1 ||
         desc.compression != QOIX_COMPRESSION_NONE ||

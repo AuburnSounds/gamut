@@ -43,6 +43,8 @@ int main(string[] args)
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
 
+        //image.premultiply();
+
         int width = image.width;
         int height = image.height;
 

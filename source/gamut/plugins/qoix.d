@@ -160,18 +160,18 @@ bool saveQOIX(ref const(Image) image, IOStream *io, IOHandle handle, int page, i
     desc.width = image._width;
     desc.height = image._height;
     desc.pitchBytes = image._pitch;
-    desc.colorspace = QOI_SRGB;
+    desc.colorspace = QOIX_SRGB;
     desc.compression = QOIX_COMPRESSION_NONE; // whatever, this will get overwritten. QOIX is valid with 0 or 1.
     desc.pixelAspectRatio = image._pixelAspectRatio;
     desc.resolutionY = image._resolutionY;
 
     switch (image._type)
     {
-        case PixelType.l8: 
+        case PixelType.l8:
             desc.bitdepth = 8;
             desc.channels = 1; 
             break;
-        case PixelType.la8:  
+        case PixelType.la8:
             desc.bitdepth = 8;
             desc.channels = 2; 
             break;
@@ -183,11 +183,16 @@ bool saveQOIX(ref const(Image) image, IOStream *io, IOHandle handle, int page, i
             desc.bitdepth = 8;
             desc.channels = 4; 
             break;
-        case PixelType.l16: 
+        case PixelType.rgbap8:
+            desc.bitdepth = 8;
+            desc.channels = 4; 
+            desc.colorspace = QOIX_SRGB_PREMUL;
+            break;
+        case PixelType.l16:
             desc.channels = 1; 
             desc.bitdepth = 10;
             break;
-        case PixelType.la16:   
+        case PixelType.la16:
             desc.channels = 2; 
             desc.bitdepth = 10;
             break;
@@ -324,12 +329,14 @@ ubyte* qoix_lz4_decode(const(ubyte)* data,
         return null;
 
     int compression    = data[QOIX_HEADER_OFFSET_COMPRESSION];
+    int colorspace     = data[QOIX_HEADER_OFFSET_COLORSPACE];
     int streamChannels = data[QOIX_HEADER_OFFSET_CHANNELS];
     int streamBitdepth = data[QOIX_HEADER_OFFSET_BITDEPTH];
+    bool premulAlpha = (colorspace == 2);
 
     // What type should it be once decompressed?
     PixelType streamType;
-    if (!identifyTypeFromStream(streamChannels, streamBitdepth, streamType))
+    if (!identifyTypeFromStream(streamChannels, streamBitdepth, premulAlpha, streamType))
     {
         // Corrupted stream, unknown type.
         return null;
@@ -421,18 +428,18 @@ ubyte* qoix_lz4_decode(const(ubyte)* data,
 }
 
 // Construct output type from channel count and bitness.
-bool identifyTypeFromStream(int channels, int bitdepth, out PixelType type)
+bool identifyTypeFromStream(int channels, int bitdepth, bool premul, out PixelType type)
 {
     if (bitdepth == 8)
     {
         if (channels == 1)
             type = PixelType.l8;
         else if (channels == 2)
-            type = PixelType.la8;
+            type = premul ? PixelType.lap8 : PixelType.la8;
         else if (channels == 3)
             type = PixelType.rgb8;
         else if (channels == 4)
-            type = PixelType.rgba8;
+            type = premul ?  PixelType.rgbap8 : PixelType.rgba8;
         else
             return false;
     }
@@ -441,11 +448,11 @@ bool identifyTypeFromStream(int channels, int bitdepth, out PixelType type)
         if (channels == 1)
             type = PixelType.l16;
         else if (channels == 2)
-            type = PixelType.la16;
+            type = premul ? PixelType.lap16 : PixelType.la16;
         else if (channels == 3)
             type = PixelType.rgb16;
         else if (channels == 4)
-            type = PixelType.rgba16;
+            type = premul ? PixelType.rgbap16 : PixelType.rgba16;
         else
             return false;
     }
