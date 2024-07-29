@@ -27,21 +27,26 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 - GIF: 8-bit, RGBA, animation support
 - BMP: 8-bit, RGB/RGBA
 - QOI: 8-bit, RGB/RGBA
-- QOIX: 8-bit, 10-bit, L/LA/RGB/RGBA
+- QOIX: 8-bit, 10-bit, L/LA/RGB/RGBA, premultiplied alpha
 - DDS: BC7 encoded, 8-bit, RGB/RGBA
 
 
 
 ## Changelog
 
-- **v2.6.y** Added JPEG XL input. 8-bit, no alpha, `cjxl --effort 4` or lower, raw streams not ISO BMFF.
-- **v2.5.y** Added BMP input.
-- **v2.4.y** Added BMP output.
-- **v2.3.y** Added GIF input and GIF output. Added multilayer images.
-- **v2.2.y** Added 16-bit PNG output.
-- **v2.1.y** Added TGA format support.
-- **v2.x.y** QOIX bitstream changed. Ways to disown and deallocate image allocation pointer. It's safe to update to latest tag in the same major version. Do keep a 16-bit source in case the bitstream changes.
-- **v1.x.y** Initial release.
+- **v3** Added premultiplied alpha pixel types. **BREAKING**.
+    * Decoders are now allowed to return any type if you do not specify `LOAD_PREMUL` or `LOAD_NO_PREMUL`.
+      Update your loading code. 
+    * Introduce `image.premultiply()` and `image.unpremultiply()`.
+    * QOIX supports encoding premultiplied. Saves space and decoding times for transparent overlays.
+- **v2.6** Added JPEG XL input. 8-bit, no alpha, `cjxl --effort 4` or lower, raw streams not ISO BMFF.
+- **v2.5** Added BMP input.
+- **v2.4** Added BMP output.
+- **v2.3** Added GIF input and GIF output. Added multilayer images.
+- **v2.2** Added 16-bit PNG output.
+- **v2.1** Added TGA format support.
+- **v2** QOIX bitstream changed. Ways to disown and deallocate image allocation pointer. It's safe to update to latest tag in the same major version. Do keep a 16-bit source in case the bitstream changes.
+- **v1** Initial release.
 
 ## Why QOIX?
 
@@ -60,6 +65,9 @@ Our benchmark results for 8-bit color images:
   * because it is followed by LZ4, which removes some of the QOI worst cases.
 - QOIX adds support for 8-bit greyscale and greyscale + alpha images, with a "QOI-plane" custom codec.
 - QOIX adds support for 10-bit images, with a "QOI-10b" custom codec. It drops the last 6 bits of precision (lossy) to outperform PNG 16-bit in every way for some use cases.
+- QOIX support for premultiplied alpha brings even more speed and compression for transparent images.
+
+Use the `convert` tool to encode QOIX.
 
 
 &nbsp;
