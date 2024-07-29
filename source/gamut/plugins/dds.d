@@ -115,8 +115,6 @@ bool saveDDS(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
 
 
     // 2. Write compressed blocks
-
-    bc7enc16_compress_block_init();
     alias bc7_block_t = ubyte[16]; // A 128-bit block containing a 4x4 pixel patch.
 
     enum bool perceptual = true;

@@ -4,10 +4,8 @@ module gamut.codecs.bc7enc16;
 
 version(encodeDDS):
 
-
 import core.stdc.string: memset, memcpy;
 import std.math: abs, sqrt, floor;
-import gamut.internals.mutex;
 
 // File: bc7enc16.h - Richard Geldreich, Jr. - MIT license or public domain (see end of bc7enc16.c)
 
@@ -320,53 +318,143 @@ struct endpoint_err
     ubyte m_hi; 
 }
 
-__gshared endpoint_err[2][256] g_bc7_mode_1_optimal_endpoints; // [c][pbit]
-__gshared Mutex g_tableProtect;
-__gshared bool g_tableInitialized = false;
-
 enum uint BC7ENC16_MODE_1_OPTIMAL_INDEX = 2;
 
-// Initialize the lookup table used for optimal single color compression in mode 1
-// Warning: bc7enc16_compress_block_init() MUST be called before calling bc7enc16_compress_block() (or you'll get artifacts).
-// Note: this is racey, so we use a self-init mutex.
-void bc7enc16_compress_block_init() @trusted
-{
-    g_tableProtect.lockLazy();
-    scope(exit) g_tableProtect.unlock();
 
-    if (g_tableInitialized)
-        return;
+// original source computed that table, but it's only 2kb
+static immutable endpoint_err[2][256] g_bc7_mode_1_optimal_endpoints = 
 
-    g_tableInitialized = true;
+[ 
+    [endpoint_err(0, 0, 0), endpoint_err(4, 0, 0)], [endpoint_err(0, 0, 1), endpoint_err(1, 0, 0)], 
+    [endpoint_err(0, 0, 2), endpoint_err(0, 0, 0)], [endpoint_err(0, 0, 3), endpoint_err(0, 0, 1)], 
+    [endpoint_err(0, 1, 1), endpoint_err(0, 0, 2)], [endpoint_err(0, 0, 4), endpoint_err(0, 0, 3)], 
+    [endpoint_err(0, 0, 5), endpoint_err(0, 1, 1)], [endpoint_err(0, 0, 6), endpoint_err(0, 0, 4)], 
+    [endpoint_err(0, 0, 7), endpoint_err(0, 0, 5)], [endpoint_err(0, 0, 8), endpoint_err(0, 0, 6)], 
+    [endpoint_err(0, 0, 9), endpoint_err(0, 0, 7)], [endpoint_err(0, 0, 10), endpoint_err(0, 0, 8)], 
+    [endpoint_err(0, 0, 11), endpoint_err(0, 0, 9)], [endpoint_err(0, 1, 9), endpoint_err(0, 0, 10)], 
+    [endpoint_err(0, 0, 12), endpoint_err(0, 0, 11)], [endpoint_err(0, 0, 13), endpoint_err(0, 1, 9)],
+    [endpoint_err(0, 0, 14), endpoint_err(0, 0, 12)], [endpoint_err(0, 0, 15), endpoint_err(0, 0, 13)],
+    [endpoint_err(0, 0, 16), endpoint_err(0, 0, 14)], [endpoint_err(0, 0, 17), endpoint_err(0, 0, 15)],
+    [endpoint_err(0, 0, 18), endpoint_err(0, 0, 16)], [endpoint_err(0, 0, 19), endpoint_err(0, 0, 17)], 
+    [endpoint_err(0, 1, 17), endpoint_err(0, 0, 18)], [endpoint_err(0, 0, 20), endpoint_err(0, 0, 19)], 
+    [endpoint_err(0, 0, 21), endpoint_err(0, 1, 17)], [endpoint_err(0, 0, 22), endpoint_err(0, 0, 20)], 
+    [endpoint_err(0, 0, 23), endpoint_err(0, 0, 21)], [endpoint_err(0, 0, 24), endpoint_err(0, 0, 22)], 
+    [endpoint_err(0, 0, 25), endpoint_err(0, 0, 23)], [endpoint_err(0, 0, 26), endpoint_err(0, 0, 24)], 
+    [endpoint_err(0, 0, 27), endpoint_err(0, 0, 25)], [endpoint_err(0, 1, 25), endpoint_err(0, 0, 26)], 
+    [endpoint_err(0, 0, 28), endpoint_err(0, 0, 27)], [endpoint_err(0, 0, 29), endpoint_err(0, 1, 25)], 
+    [endpoint_err(0, 0, 30), endpoint_err(0, 0, 28)], [endpoint_err(0, 0, 31), endpoint_err(0, 0, 29)], 
+    [endpoint_err(0, 0, 32), endpoint_err(0, 0, 30)], [endpoint_err(0, 0, 33), endpoint_err(0, 0, 31)], 
+    [endpoint_err(0, 1, 31), endpoint_err(0, 0, 32)], [endpoint_err(0, 0, 34), endpoint_err(0, 0, 33)], 
+    [endpoint_err(0, 0, 35), endpoint_err(0, 1, 31)], [endpoint_err(0, 0, 36), endpoint_err(0, 0, 34)], 
+    [endpoint_err(0, 0, 37), endpoint_err(0, 0, 35)], [endpoint_err(0, 0, 38), endpoint_err(0, 0, 36)], 
+    [endpoint_err(0, 0, 39), endpoint_err(0, 0, 37)], [endpoint_err(0, 0, 40), endpoint_err(0, 0, 38)], 
+    [endpoint_err(0, 0, 41), endpoint_err(0, 0, 39)], [endpoint_err(0, 1, 39), endpoint_err(0, 0, 40)], 
+    [endpoint_err(0, 0, 42), endpoint_err(0, 0, 41)], [endpoint_err(0, 0, 43), endpoint_err(0, 1, 39)], 
+    [endpoint_err(0, 0, 44), endpoint_err(0, 0, 42)], [endpoint_err(0, 0, 45), endpoint_err(0, 0, 43)], 
+    [endpoint_err(0, 0, 46), endpoint_err(0, 0, 44)], [endpoint_err(0, 0, 47), endpoint_err(0, 0, 45)], 
+    [endpoint_err(0, 0, 48), endpoint_err(0, 0, 46)], [endpoint_err(0, 0, 49), endpoint_err(0, 0, 47)], 
+    [endpoint_err(0, 1, 47), endpoint_err(0, 0, 48)], [endpoint_err(0, 0, 50), endpoint_err(0, 0, 49)], 
+    [endpoint_err(0, 0, 51), endpoint_err(0, 1, 47)], [endpoint_err(0, 0, 52), endpoint_err(0, 0, 50)], 
+    [endpoint_err(0, 0, 53), endpoint_err(0, 0, 51)], [endpoint_err(0, 0, 54), endpoint_err(0, 0, 52)], 
+    [endpoint_err(0, 0, 55), endpoint_err(0, 0, 53)], [endpoint_err(0, 0, 56), endpoint_err(0, 0, 54)], 
+    [endpoint_err(0, 0, 57), endpoint_err(0, 0, 55)], [endpoint_err(0, 1, 55), endpoint_err(0, 0, 56)], 
+    [endpoint_err(0, 0, 58), endpoint_err(0, 0, 57)], [endpoint_err(0, 0, 59), endpoint_err(0, 1, 55)], 
+    [endpoint_err(0, 0, 60), endpoint_err(0, 0, 58)], [endpoint_err(0, 0, 61), endpoint_err(0, 0, 59)], 
+    [endpoint_err(0, 0, 62), endpoint_err(0, 0, 60)], [endpoint_err(0, 0, 63), endpoint_err(0, 0, 61)], 
+    [endpoint_err(0, 1, 61), endpoint_err(0, 0, 62)], [endpoint_err(0, 1, 62), endpoint_err(0, 0, 63)], 
+    [endpoint_err(0, 1, 63), endpoint_err(0, 1, 61)], [endpoint_err(0, 2, 61), endpoint_err(0, 1, 62)], 
+    [endpoint_err(0, 2, 62), endpoint_err(0, 1, 63)], [endpoint_err(0, 2, 63), endpoint_err(0, 2, 61)], 
+    [endpoint_err(0, 3, 61), endpoint_err(0, 2, 62)], [endpoint_err(0, 3, 62), endpoint_err(0, 2, 63)], 
+    [endpoint_err(0, 3, 63), endpoint_err(0, 3, 61)], [endpoint_err(0, 5, 59), endpoint_err(0, 3, 62)], 
+    [endpoint_err(0, 4, 62), endpoint_err(0, 3, 63)], [endpoint_err(0, 4, 63), endpoint_err(0, 5, 59)], 
+    [endpoint_err(0, 5, 62), endpoint_err(0, 4, 62)], [endpoint_err(0, 6, 60), endpoint_err(0, 4, 63)], 
+    [endpoint_err(0, 5, 63), endpoint_err(0, 5, 62)], [endpoint_err(0, 6, 62), endpoint_err(0, 6, 60)], 
+    [endpoint_err(0, 6, 63), endpoint_err(0, 5, 63)], [endpoint_err(0, 7, 61), endpoint_err(0, 6, 62)],
+    [endpoint_err(0, 7, 62), endpoint_err(0, 6, 63)], [endpoint_err(0, 7, 63), endpoint_err(0, 7, 61)],
+    [endpoint_err(0, 8, 61), endpoint_err(0, 7, 62)], [endpoint_err(0, 8, 62), endpoint_err(0, 7, 63)], 
+    [endpoint_err(0, 8, 63), endpoint_err(0, 8, 61)], [endpoint_err(0, 9, 61), endpoint_err(0, 8, 62)], 
+    [endpoint_err(0, 9, 62), endpoint_err(0, 8, 63)], [endpoint_err(0, 9, 63), endpoint_err(0, 9, 61)], 
+    [endpoint_err(0, 10, 61), endpoint_err(0, 9, 62)], [endpoint_err(0, 10, 62), endpoint_err(0, 9, 63)], 
+    [endpoint_err(0, 10, 63), endpoint_err(0, 10, 61)], [endpoint_err(0, 11, 61), endpoint_err(0, 10, 62)], 
+    [endpoint_err(0, 11, 62), endpoint_err(0, 10, 63)], [endpoint_err(0, 11, 63), endpoint_err(0, 11, 61)], 
+    [endpoint_err(0, 13, 59), endpoint_err(0, 11, 62)], [endpoint_err(0, 12, 62), endpoint_err(0, 11, 63)], 
+    [endpoint_err(0, 12, 63), endpoint_err(0, 13, 59)], [endpoint_err(0, 13, 62), endpoint_err(0, 12, 62)], 
+    [endpoint_err(0, 14, 60), endpoint_err(0, 12, 63)], [endpoint_err(0, 13, 63), endpoint_err(0, 13, 62)], 
+    [endpoint_err(0, 14, 62), endpoint_err(0, 14, 60)], [endpoint_err(0, 14, 63), endpoint_err(0, 13, 63)], 
+    [endpoint_err(0, 15, 61), endpoint_err(0, 14, 62)], [endpoint_err(0, 15, 62), endpoint_err(0, 14, 63)], 
+    [endpoint_err(0, 15, 63), endpoint_err(0, 15, 61)], [endpoint_err(0, 16, 61), endpoint_err(0, 15, 62)], 
+    [endpoint_err(0, 16, 62), endpoint_err(0, 15, 63)], [endpoint_err(0, 16, 63), endpoint_err(0, 16, 61)], 
+    [endpoint_err(0, 17, 61), endpoint_err(0, 16, 62)], [endpoint_err(0, 17, 62), endpoint_err(0, 16, 63)], 
+    [endpoint_err(0, 17, 63), endpoint_err(0, 17, 61)], [endpoint_err(0, 18, 61), endpoint_err(0, 17, 62)], 
+    [endpoint_err(0, 18, 62), endpoint_err(0, 17, 63)], [endpoint_err(0, 18, 63), endpoint_err(0, 18, 61)], 
+    [endpoint_err(0, 19, 61), endpoint_err(0, 18, 62)], [endpoint_err(0, 19, 62), endpoint_err(0, 18, 63)], 
+    [endpoint_err(0, 19, 63), endpoint_err(0, 19, 61)], [endpoint_err(0, 21, 59), endpoint_err(0, 19, 62)], 
+    [endpoint_err(0, 20, 62), endpoint_err(0, 19, 63)], [endpoint_err(0, 20, 63), endpoint_err(0, 21, 59)], 
+    [endpoint_err(0, 21, 62), endpoint_err(0, 20, 62)], [endpoint_err(0, 22, 60), endpoint_err(0, 20, 63)], 
+    [endpoint_err(0, 21, 63), endpoint_err(0, 21, 62)], [endpoint_err(0, 22, 62), endpoint_err(0, 22, 60)], 
+    [endpoint_err(0, 22, 63), endpoint_err(0, 21, 63)], [endpoint_err(0, 23, 61), endpoint_err(0, 22, 62)], 
+    [endpoint_err(0, 23, 62), endpoint_err(0, 22, 63)], [endpoint_err(0, 23, 63), endpoint_err(0, 23, 61)], 
+    [endpoint_err(0, 24, 61), endpoint_err(0, 23, 62)], [endpoint_err(0, 24, 62), endpoint_err(0, 23, 63)], 
+    [endpoint_err(0, 24, 63), endpoint_err(0, 24, 61)], [endpoint_err(0, 25, 61), endpoint_err(0, 24, 62)], 
+    [endpoint_err(0, 25, 62), endpoint_err(0, 24, 63)], [endpoint_err(0, 25, 63), endpoint_err(0, 25, 61)], 
+    [endpoint_err(0, 26, 61), endpoint_err(0, 25, 62)], [endpoint_err(0, 26, 62), endpoint_err(0, 25, 63)], 
+    [endpoint_err(0, 26, 63), endpoint_err(0, 26, 61)], [endpoint_err(0, 27, 61), endpoint_err(0, 26, 62)], 
+    [endpoint_err(0, 27, 62), endpoint_err(0, 26, 63)], [endpoint_err(0, 27, 63), endpoint_err(0, 27, 61)], 
+    [endpoint_err(0, 29, 59), endpoint_err(0, 27, 62)], [endpoint_err(0, 28, 62), endpoint_err(0, 27, 63)], 
+    [endpoint_err(0, 28, 63), endpoint_err(0, 29, 59)], [endpoint_err(0, 29, 62), endpoint_err(0, 28, 62)], 
+    [endpoint_err(0, 30, 60), endpoint_err(0, 28, 63)], [endpoint_err(0, 29, 63), endpoint_err(0, 29, 62)], 
+    [endpoint_err(0, 30, 62), endpoint_err(0, 30, 60)], [endpoint_err(0, 30, 63), endpoint_err(0, 29, 63)], 
+    [endpoint_err(0, 31, 61), endpoint_err(0, 30, 62)], [endpoint_err(0, 31, 62), endpoint_err(0, 30, 63)], 
+    [endpoint_err(0, 31, 63), endpoint_err(0, 31, 61)], [endpoint_err(0, 32, 60), endpoint_err(0, 31, 62)], 
+    [endpoint_err(0, 32, 61), endpoint_err(0, 31, 63)], [endpoint_err(0, 32, 62), endpoint_err(0, 32, 60)], 
+    [endpoint_err(0, 32, 63), endpoint_err(0, 32, 61)], [endpoint_err(0, 33, 61), endpoint_err(0, 32, 62)], 
+    [endpoint_err(0, 33, 62), endpoint_err(0, 32, 63)], [endpoint_err(0, 33, 63), endpoint_err(0, 33, 61)], 
+    [endpoint_err(0, 35, 59), endpoint_err(0, 33, 62)], [endpoint_err(0, 34, 62), endpoint_err(0, 33, 63)], 
+    [endpoint_err(0, 34, 63), endpoint_err(0, 35, 59)], [endpoint_err(0, 35, 62), endpoint_err(0, 34, 62)], 
+    [endpoint_err(0, 36, 60), endpoint_err(0, 34, 63)], [endpoint_err(0, 35, 63), endpoint_err(0, 35, 62)], 
+    [endpoint_err(0, 36, 62), endpoint_err(0, 36, 60)], [endpoint_err(0, 36, 63), endpoint_err(0, 35, 63)], 
+    [endpoint_err(0, 37, 61), endpoint_err(0, 36, 62)], [endpoint_err(0, 37, 62), endpoint_err(0, 36, 63)], 
+    [endpoint_err(0, 37, 63), endpoint_err(0, 37, 61)], [endpoint_err(0, 38, 61), endpoint_err(0, 37, 62)], 
+    [endpoint_err(0, 38, 62), endpoint_err(0, 37, 63)], [endpoint_err(0, 38, 63), endpoint_err(0, 38, 61)], 
+    [endpoint_err(0, 39, 61), endpoint_err(0, 38, 62)], [endpoint_err(0, 39, 62), endpoint_err(0, 38, 63)], 
+    [endpoint_err(0, 39, 63), endpoint_err(0, 39, 61)], [endpoint_err(0, 40, 61), endpoint_err(0, 39, 62)], 
+    [endpoint_err(0, 40, 62), endpoint_err(0, 39, 63)], [endpoint_err(0, 40, 63), endpoint_err(0, 40, 61)], 
+    [endpoint_err(0, 41, 61), endpoint_err(0, 40, 62)], [endpoint_err(0, 41, 62), endpoint_err(0, 40, 63)], 
+    [endpoint_err(0, 41, 63), endpoint_err(0, 41, 61)], [endpoint_err(0, 43, 59), endpoint_err(0, 41, 62)], 
+    [endpoint_err(0, 42, 62), endpoint_err(0, 41, 63)], [endpoint_err(0, 42, 63), endpoint_err(0, 43, 59)], 
+    [endpoint_err(0, 43, 62), endpoint_err(0, 42, 62)], [endpoint_err(0, 44, 60), endpoint_err(0, 42, 63)], 
+    [endpoint_err(0, 43, 63), endpoint_err(0, 43, 62)], [endpoint_err(0, 44, 62), endpoint_err(0, 44, 60)], 
+    [endpoint_err(0, 44, 63), endpoint_err(0, 43, 63)], [endpoint_err(0, 45, 61), endpoint_err(0, 44, 62)], 
+    [endpoint_err(0, 45, 62), endpoint_err(0, 44, 63)], [endpoint_err(0, 45, 63), endpoint_err(0, 45, 61)], 
+    [endpoint_err(0, 46, 61), endpoint_err(0, 45, 62)], [endpoint_err(0, 46, 62), endpoint_err(0, 45, 63)], 
+    [endpoint_err(0, 46, 63), endpoint_err(0, 46, 61)], [endpoint_err(0, 47, 61), endpoint_err(0, 46, 62)], 
+    [endpoint_err(0, 47, 62), endpoint_err(0, 46, 63)], [endpoint_err(0, 47, 63), endpoint_err(0, 47, 61)], 
+    [endpoint_err(0, 48, 61), endpoint_err(0, 47, 62)], [endpoint_err(0, 48, 62), endpoint_err(0, 47, 63)], 
+    [endpoint_err(0, 48, 63), endpoint_err(0, 48, 61)], [endpoint_err(0, 49, 61), endpoint_err(0, 48, 62)], 
+    [endpoint_err(0, 49, 62), endpoint_err(0, 48, 63)], [endpoint_err(0, 49, 63), endpoint_err(0, 49, 61)], 
+    [endpoint_err(0, 51, 59), endpoint_err(0, 49, 62)], [endpoint_err(0, 50, 62), endpoint_err(0, 49, 63)], 
+    [endpoint_err(0, 50, 63), endpoint_err(0, 51, 59)], [endpoint_err(0, 51, 62), endpoint_err(0, 50, 62)], 
+    [endpoint_err(0, 52, 60), endpoint_err(0, 50, 63)], [endpoint_err(0, 51, 63), endpoint_err(0, 51, 62)], 
+    [endpoint_err(0, 52, 62), endpoint_err(0, 52, 60)], [endpoint_err(0, 52, 63), endpoint_err(0, 51, 63)], 
+    [endpoint_err(0, 53, 61), endpoint_err(0, 52, 62)], [endpoint_err(0, 53, 62), endpoint_err(0, 52, 63)], 
+    [endpoint_err(0, 53, 63), endpoint_err(0, 53, 61)], [endpoint_err(0, 54, 61), endpoint_err(0, 53, 62)], 
+    [endpoint_err(0, 54, 62), endpoint_err(0, 53, 63)], [endpoint_err(0, 54, 63), endpoint_err(0, 54, 61)], 
+    [endpoint_err(0, 55, 61), endpoint_err(0, 54, 62)], [endpoint_err(0, 55, 62), endpoint_err(0, 54, 63)], 
+    [endpoint_err(0, 55, 63), endpoint_err(0, 55, 61)], [endpoint_err(0, 56, 61), endpoint_err(0, 55, 62)], 
+    [endpoint_err(0, 56, 62), endpoint_err(0, 55, 63)], [endpoint_err(0, 56, 63), endpoint_err(0, 56, 61)], 
+    [endpoint_err(0, 57, 61), endpoint_err(0, 56, 62)], [endpoint_err(0, 57, 62), endpoint_err(0, 56, 63)], 
+    [endpoint_err(0, 57, 63), endpoint_err(0, 57, 61)], [endpoint_err(0, 59, 59), endpoint_err(0, 57, 62)], 
+    [endpoint_err(0, 58, 62), endpoint_err(0, 57, 63)], [endpoint_err(0, 58, 63), endpoint_err(0, 59, 59)], 
+    [endpoint_err(0, 59, 62), endpoint_err(0, 58, 62)], [endpoint_err(0, 60, 60), endpoint_err(0, 58, 63)], 
+    [endpoint_err(0, 59, 63), endpoint_err(0, 59, 62)], [endpoint_err(0, 60, 62), endpoint_err(0, 60, 60)], 
+    [endpoint_err(0, 60, 63), endpoint_err(0, 59, 63)], [endpoint_err(0, 61, 61), endpoint_err(0, 60, 62)], 
+    [endpoint_err(0, 61, 62), endpoint_err(0, 60, 63)], [endpoint_err(0, 61, 63), endpoint_err(0, 61, 61)], 
+    [endpoint_err(0, 62, 61), endpoint_err(0, 61, 62)], [endpoint_err(0, 62, 62), endpoint_err(0, 61, 63)], 
+    [endpoint_err(0, 62, 63), endpoint_err(0, 62, 61)], [endpoint_err(0, 63, 61), endpoint_err(0, 62, 62)], 
+    [endpoint_err(0, 63, 62), endpoint_err(0, 62, 63)], [endpoint_err(0, 63, 63), endpoint_err(0, 63, 61)], 
+    [endpoint_err(1, 63, 63), endpoint_err(0, 63, 62)], [endpoint_err(4, 63, 63), endpoint_err(0, 63, 63)]
+];
 
-    for (int c = 0; c < 256; c++)
-    {
-        for (uint lp = 0; lp < 2; lp++)
-        {
-            endpoint_err best;
-            best.m_error = ushort.max;
-            for (uint l = 0; l < 64; l++)
-            {
-                uint low = ((l << 1) | lp) << 1;
-                low |= (low >> 7);
-                for (uint h = 0; h < 64; h++)
-                {
-                    uint high = ((h << 1) | lp) << 1;
-                    high |= (high >> 7);
-                    const int k = (low * (64 - g_bc7_weights3[BC7ENC16_MODE_1_OPTIMAL_INDEX]) + high * g_bc7_weights3[BC7ENC16_MODE_1_OPTIMAL_INDEX] + 32) >> 6;
-                    const int err = (k - c) * (k - c);
-                    if (err < best.m_error)
-                    {
-                        best.m_error = cast(ushort)err;
-                        best.m_lo = cast(ubyte)l;
-                        best.m_hi = cast(ubyte)h;
-                    }
-                }
-            }
-            g_bc7_mode_1_optimal_endpoints[c][lp] = best;
-        }
-    }
-}
 
 void compute_least_squares_endpoints_rgba(uint N, 
                                           const(ubyte)* pSelectors, 
