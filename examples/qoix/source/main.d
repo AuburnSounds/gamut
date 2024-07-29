@@ -36,20 +36,22 @@ int main(string[] args)
         ubyte[] originalImage = cast(ubyte[]) std.file.read(f);
 
         double original_size_kb = originalImage.length / 1024.0;
-        writefln("*** image of size %.1f kb: %s", original_size_kb, f);
+        writef("*** image of size %.1f kb: %s", original_size_kb, f);
 
         Image image;
         double orig_decode_ms = measure( { image.loadFromMemory(originalImage); } );
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
 
-        //image.premultiply();
+        image.premultiply();
 
         int width = image.width;
         int height = image.height;
 
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
+
+        writefln(" (%s)", image.type);
 
         ubyte[] qoix_encoded;
         double qoix_encode_ms = measure( { qoix_encoded = image.saveToMemory(ImageFormat.QOIX); } );

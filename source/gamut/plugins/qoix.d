@@ -175,6 +175,11 @@ bool saveQOIX(ref const(Image) image, IOStream *io, IOHandle handle, int page, i
             desc.bitdepth = 8;
             desc.channels = 2; 
             break;
+        case PixelType.lap8:
+            desc.bitdepth = 8;
+            desc.channels = 2; 
+            desc.colorspace = QOIX_SRGB_PREMUL;
+            break;
         case PixelType.rgb8: 
             desc.bitdepth = 8;
             desc.channels = 3; 
@@ -196,6 +201,11 @@ bool saveQOIX(ref const(Image) image, IOStream *io, IOHandle handle, int page, i
             desc.channels = 2; 
             desc.bitdepth = 10;
             break;
+        case PixelType.lap16:
+            desc.channels = 2; 
+            desc.bitdepth = 10;
+            desc.colorspace = QOIX_SRGB_PREMUL;
+            break;
         case PixelType.rgb16:  
             desc.channels = 3; 
             desc.bitdepth = 10;
@@ -203,6 +213,11 @@ bool saveQOIX(ref const(Image) image, IOStream *io, IOHandle handle, int page, i
         case PixelType.rgba16: 
             desc.channels = 4; 
             desc.bitdepth = 10;
+            break;
+        case PixelType.rgbap16:
+            desc.channels = 4;
+            desc.bitdepth = 10;
+            desc.colorspace = QOIX_SRGB_PREMUL;
             break;
         default: 
             return false; // not supported
