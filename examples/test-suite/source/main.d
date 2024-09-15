@@ -16,6 +16,7 @@ void main(string[] args)
     testDecodingGIF();
     testIssue63();
     testIssue65();
+    testIssue67();
 }
 
 void testIssue35()
@@ -147,6 +148,17 @@ void testIssue65()
     assert(img.hasData);
     if (!img.saveToFile("output/decoded.png")) // <-- this wouldn't assert fail, but it just emits an empty file with error set
         throw new Exception(img.errorMessage().idup);
+}
+
+void testIssue67()
+{
+    import core.math: fabs;
+    Image img;
+    if (!img.loadFromFile("test-images/issue67.bmp"))
+        throw new Exception(img.errorMessage().idup);
+    assert(fabs(img.dotsPerInchX() - 200) < 0.1);
+    assert(fabs(img.dotsPerInchY() - 100) < 0.1);
+    assert(fabs(img.pixelAspectRatio() - 2) < 0.01);
 }
 
 /+
