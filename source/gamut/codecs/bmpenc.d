@@ -9,9 +9,11 @@ License:   $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module gamut.codecs.bmpenc;
 
 import core.stdc.stdlib: malloc, free;
+import core.stdc.math: round;
 import gamut.io;
 import gamut.image;
 import gamut.scanline;
+import gamut.types;
 
 @nogc nothrow:
 
@@ -55,7 +57,22 @@ bool write_bmp(ref const(Image) image,
     hdr[26..28] = nativeToLittleEndian_ushort(1);         // planes
     hdr[28..30] = nativeToLittleEndian_ushort(cast(ushort)(tgt_chans * 8)); // bits per pixel
     hdr[30..34] = nativeToLittleEndian_uint((tgt_chans == 3) ? CMP_RGB : CMP_BITS);
-    hdr[34..54] = 0;                                       // rest of dib v1
+
+    hdr[34..38] = 0; // biSizeImage
+
+    float ppmX = image.pixelsPerMeterX();
+    float ppmY = image.pixelsPerMeterY();
+
+    int ippmX = 0,
+        ippmY = 0;
+    if (ppmX != GAMUT_UNKNOWN_RESOLUTION)
+        ippmX = cast(int) round( ppmX );
+    if (ppmY != GAMUT_UNKNOWN_RESOLUTION)
+        ippmY = cast(int) round( ppmY );
+
+    hdr[38..42] = nativeToLittleEndian_uint(ippmX);
+    hdr[42..46] = nativeToLittleEndian_uint(ippmY);
+    hdr[46..54] = 0;                                       // rest of dib v1
     if (tgt_chans == 3) 
     {
         hdr[54..70] = 0;    // dib v2 and v3
