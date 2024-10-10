@@ -40,35 +40,6 @@ bool pixelTypeIsCompressed(PixelType t) pure
     return false; // No support yet in gamut.
 }
 
-/// Size of one pixel for given pixel type `type`, in bytes.
-int pixelTypeSize(PixelType type) pure
-{
-    final switch(type) with (PixelType)
-    {
-        case l8:       return 1;
-        case l16:      return 2;
-        case lf32:     return 4;
-        case la8:      return 2;
-        case la16:     return 4;
-        case laf32:    return 8;
-        case lap8:     return 2;
-        case lap16:    return 4;
-        case lapf32:   return 8;
-        case rgb8:     return 3;
-        case rgb16:    return 6;
-        case rgbf32:   return 12;
-        case rgba8:    return 4;
-        case rgba16:   return 8;
-        case rgbaf32:  return 16;
-        case rgbap8:   return 4;
-        case rgbap16:  return 8;
-        case rgbapf32: return 16;
-        case unknown: assert(false);
-    }
-}
-
-enum int GAMUT_MAX_PIXEL_SIZE = 16; // keep it in sync
-
 /// Number of channels in this image type.
 int pixelTypeNumChannels(PixelType type) pure
 {

@@ -1193,7 +1193,7 @@ public:
 
         // Do we need to convert scanline by scanline, using a scratch buffer?
         bool needConversionWithIntermediateType = targetType != _type;
-        PixelType interType = intermediateConversionType(_type, targetType);
+        PixelType interType = scanlinesInterType(_type, targetType);
         int interBufSize = width * pixelTypeSize(interType);
         int bonusBytes = needConversionWithIntermediateType ? interBufSize : 0;
 
@@ -1234,7 +1234,7 @@ public:
             ubyte* destLayer = dest;
             for (int layer = 0; layer < layerCount; ++layer)
             {
-                ok = copyScanlines(targetType, 
+                ok = scanlinesCopy(targetType, 
                                    sourceLayer, sourcePitch,
                                    destLayer, destPitch,
                                    width, height);
@@ -1256,7 +1256,7 @@ public:
             ubyte* destLayer = dest;
             for (int layer = 0; layer < layerCount; ++layer)
             {
-                ok = convertScanlines(_type, sourceLayer, sourcePitch, 
+                ok = scanlinesConvert(_type, sourceLayer, sourcePitch, 
                                       targetType, destLayer, destPitch,
                                       width, height,
                                       interType, interBuf);
@@ -1916,179 +1916,7 @@ private:
 
 private:
 
-// FUTURE: this will also manage color conversion.
-PixelType intermediateConversionType(PixelType srcType, PixelType destType)
-{
-    if (pixelTypeExpressibleInRGBA8(srcType) && pixelTypeExpressibleInRGBA8(destType))
-        return PixelType.rgba8;
 
-    return PixelType.rgbaf32;
-}
-
-// This converts scanline per scanline, using an intermediate format to lessen the number of conversions.
-bool convertScanlines(PixelType srcType, const(ubyte)* src, int srcPitch, 
-                      PixelType destType, ubyte* dest, int destPitch,
-                      int width, int height,
-                      PixelType interType, ubyte* interBuf) @system
-{
-    assert(srcType != destType);
-    assert(srcType != PixelType.unknown && destType != PixelType.unknown);
-
-    if (pixelTypeIsPlanar(srcType) || pixelTypeIsPlanar(destType))
-        return false; // No support
-    if (pixelTypeIsCompressed(srcType) || pixelTypeIsCompressed(destType))
-        return false; // No support
-
-    if (srcType == interType)
-    {
-        // Source type is already in the intermediate type format.
-        // Do not use the interbuf.
-        for (int y = 0; y < height; ++y)
-        {
-            convertFromIntermediate(srcType, src, destType, dest, width);
-            src += srcPitch;
-            dest += destPitch;
-        }
-    }
-    else if (destType == interType)
-    {
-        // Destination type is the intermediate type.
-        // Do not use the interbuf.
-        for (int y = 0; y < height; ++y)
-        {
-            convertToIntermediateScanline(srcType, src, destType, dest, width);
-            src += srcPitch;
-            dest += destPitch;
-        }
-    }
-    else
-    {
-        // For each scanline
-        for (int y = 0; y < height; ++y)
-        {
-            convertToIntermediateScanline(srcType, src, interType, interBuf, width);
-            convertFromIntermediate(interType, interBuf, destType, dest, width);
-            src += srcPitch;
-            dest += destPitch;
-        }
-    }
-    return true;
-}
-
-// This copy scanline per scanline of the same type
-bool copyScanlines(PixelType type, 
-                   const(ubyte)* src, int srcPitch, 
-                   ubyte* dest, int destPitch,
-                   int width, int height) @system
-{
-    if (pixelTypeIsPlanar(type))
-        return false; // No support
-    if (pixelTypeIsCompressed(type))
-        return false; // No support
-
-    int scanlineBytes = pixelTypeSize(type) * width;
-    for (int y = 0; y < height; ++y)
-    {
-        dest[0..scanlineBytes] = src[0..scanlineBytes];
-        src += srcPitch;
-        dest += destPitch;
-    }
-    return true;
-}
-
-
-/// See_also: OpenGL ES specification 2.3.5.1 and 2.3.5.2 for details about converting from 
-/// floating-point to integers, and the other way around.
-void convertToIntermediateScanline(PixelType srcType, 
-                                   const(ubyte)* src, 
-                                   PixelType dstType, 
-                                   ubyte* dest, int width) @system
-{
-    if (dstType == PixelType.rgba8)
-    {
-        switch(srcType) with (PixelType)
-        {
-            case l8:      scanline_convert_l8_to_rgba8    (src, dest, width); break;
-            case la8:     scanline_convert_la8_to_rgba8   (src, dest, width); break;
-            case rgb8:    scanline_convert_rgb8_to_rgba8  (src, dest, width); break;
-            case rgba8:   scanline_convert_rgba8_to_rgba8 (src, dest, width); break;
-            default:
-                assert(false); // should not use rgba8 as intermediate type
-        }
-    }
-    else if (dstType == PixelType.rgbaf32)
-    {
-        final switch(srcType) with (PixelType)
-        {
-            case unknown: assert(false);
-            case l8:      scanline_convert_l8_to_rgbaf32     (src, dest, width); break;
-            case l16:     scanline_convert_l16_to_rgbaf32    (src, dest, width); break;
-            case lf32:    scanline_convert_lf32_to_rgbaf32   (src, dest, width); break;
-            case la8:     scanline_convert_la8_to_rgbaf32    (src, dest, width); break;
-            case la16:    scanline_convert_la16_to_rgbaf32   (src, dest, width); break;
-            case laf32:   scanline_convert_laf32_to_rgbaf32  (src, dest, width); break;
-            case lap8:    scanline_convert_lap8_to_rgbaf32    (src, dest, width); break;
-            case lap16:   scanline_convert_lap16_to_rgbaf32   (src, dest, width); break;
-            case lapf32:  scanline_convert_lapf32_to_rgbaf32  (src, dest, width); break;
-            case rgb8:    scanline_convert_rgb8_to_rgbaf32   (src, dest, width); break;
-            case rgb16:   scanline_convert_rgb16_to_rgbaf32  (src, dest, width); break;
-            case rgbf32:  scanline_convert_rgbf32_to_rgbaf32 (src, dest, width); break;
-            case rgba8:   scanline_convert_rgba8_to_rgbaf32  (src, dest, width); break;
-            case rgba16:  scanline_convert_rgba16_to_rgbaf32 (src, dest, width); break;
-            case rgbaf32: scanline_convert_rgbaf32_to_rgbaf32(src, dest, width); break;
-            case rgbap8:  scanline_convert_rgbap8_to_rgbaf32  (src, dest, width); break;
-            case rgbap16: scanline_convert_rgbap16_to_rgbaf32 (src, dest, width); break;
-            case rgbapf32:scanline_convert_rgbapf32_to_rgbaf32(src, dest, width); break;
-        }
-    }
-    else
-        assert(false);
-}
-
-void convertFromIntermediate(PixelType srcType, const(ubyte)* src, PixelType dstType, ubyte* dest, int width) @system
-{
-    if (srcType == PixelType.rgba8)
-    {
-        alias inp = src;
-        switch(dstType) with (PixelType)
-        {
-            case l8:      scanline_convert_rgba8_to_l8    (src, dest, width); break;
-            case la8:     scanline_convert_rgba8_to_la8   (src, dest, width); break;
-            case rgb8:    scanline_convert_rgba8_to_rgb8  (src, dest, width); break;
-            case rgba8:   scanline_convert_rgba8_to_rgba8 (src, dest, width); break;
-            default:
-                assert(false); // should not use rgba8 as intermediate type
-        }
-    }
-    else if (srcType == PixelType.rgbaf32)
-    {    
-        const(float)* inp = cast(const(float)*) src;
-        final switch(dstType) with (PixelType)
-        {
-            case unknown: assert(false);
-            case l8:      scanline_convert_rgbaf32_to_l8     (src, dest, width); break;
-            case l16:     scanline_convert_rgbaf32_to_l16    (src, dest, width); break;
-            case lf32:    scanline_convert_rgbaf32_to_lf32   (src, dest, width); break;
-            case la8:     scanline_convert_rgbaf32_to_la8    (src, dest, width); break;
-            case la16:    scanline_convert_rgbaf32_to_la16   (src, dest, width); break;
-            case laf32:   scanline_convert_rgbaf32_to_laf32  (src, dest, width); break;
-            case lap8:    scanline_convert_rgbaf32_to_lap8    (src, dest, width); break;
-            case lap16:   scanline_convert_rgbaf32_to_lap16   (src, dest, width); break;
-            case lapf32:  scanline_convert_rgbaf32_to_lapf32  (src, dest, width); break;
-            case rgb8:    scanline_convert_rgbaf32_to_rgb8   (src, dest, width); break;
-            case rgb16:   scanline_convert_rgbaf32_to_rgb16  (src, dest, width); break;
-            case rgbf32:  scanline_convert_rgbaf32_to_rgbf32 (src, dest, width); break;
-            case rgba8:   scanline_convert_rgbaf32_to_rgba8  (src, dest, width); break;
-            case rgba16:  scanline_convert_rgbaf32_to_rgba16 (src, dest, width); break;
-            case rgbaf32: scanline_convert_rgbaf32_to_rgbaf32(src, dest, width); break;
-            case rgbap8:  scanline_convert_rgbaf32_to_rgbap8  (src, dest, width); break;
-            case rgbap16: scanline_convert_rgbaf32_to_rgbap16 (src, dest, width); break;
-            case rgbapf32:scanline_convert_rgbaf32_to_rgbapf32(src, dest, width); break;
-        }
-    }
-    else
-        assert(false);
-}
 
 
 // Test gapless pixel access
