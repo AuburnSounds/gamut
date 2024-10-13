@@ -121,6 +121,27 @@ public:
         return _layerCount;
     }
 
+    /// Get the number of channels in this image.
+    /// Tags: #valid
+    int channels() pure const
+    {
+        return pixelTypeNumChannels(_type);
+    }
+
+    /// Returns: Bits used by one pixel (BPP).
+    /// Tags: #valid
+    int bitsPerPixel() pure const
+    {
+        return pixelTypeBitsPerChannel(_type) * channels();
+    }
+
+    /// Returns: Bits used by one channel.
+    /// Tags: #valid
+    int bitsPerChannel() pure const
+    {
+        return pixelTypeBitsPerChannel(_type);
+    }
+
     /// Get the image pitch (byte distance between rows), in bytes.
     ///
     /// Warning: This pitch can be, or not be, a negative integer.
@@ -2152,6 +2173,7 @@ unittest
     assert(image.layers == 5);
     assert(image.width == 640);
     assert(image.height == 480);
+    assert(image.channels == 4);
     assert(image.hasMultipleLayers);
     assert(image.hasNonZeroSize);
     assert(image.pitchInBytes() == 640*4);
@@ -2199,6 +2221,9 @@ unittest
     assert(image.layers == 5);
     assert(image.width == 640);
     assert(image.height == 480);
+    assert(image.channels == 4);
+    assert(image.bitsPerPixel == 32);
+    assert(image.bitsPerChannel == 8);
     assert(image.hasMultipleLayers);
     assert(!image.hasZeroLayer);
     assert(!image.hasSingleLayer);
@@ -2233,6 +2258,7 @@ unittest
     assert(image.width == 3);
     assert(image.height == 4);
     assert(image.layers == 2);
+    assert(image.channels == 1);
 
     assert(image.isValid);
     assert(image.allPixelsAtOnce() == pixels[]);

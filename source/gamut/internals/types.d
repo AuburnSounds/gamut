@@ -67,6 +67,34 @@ int pixelTypeNumChannels(PixelType type) pure
     }
 }
 
+/// Number of bits for a single channel sample.
+/// For now, every channel has the same data type.
+int pixelTypeBitsPerChannel(PixelType type) pure
+{
+    final switch(type) with (PixelType)
+    {
+        case l8:       return 8;
+        case l16:      return 16;
+        case lf32:     return 32;
+        case la8:      return 8;
+        case la16:     return 16;
+        case laf32:    return 32;
+        case lap8:     return 8;
+        case lap16:    return 16;
+        case lapf32:   return 32;
+        case rgb8:     return 8;
+        case rgb16:    return 16;
+        case rgbf32:   return 32;
+        case rgba8:    return 8;
+        case rgba16:   return 16;
+        case rgbaf32:  return 32;
+        case rgbap8:   return 8;
+        case rgbap16:  return 16;
+        case rgbapf32: return 32;
+        case unknown: assert(false);
+    }
+}
+
 /// Is this type 8-bit?
 bool pixelTypeIs8Bit(PixelType type) pure
 {
