@@ -145,7 +145,6 @@ Use the `convert` tool to encode QOIX.
   _**Alpha premultiplication:** When an alpha channel exist, both premultiplied and non-premultiplied variants exist._
 
 
-
 ### **1.3 Create an image:**
 
 > Different ways to create an `Image`:
@@ -210,7 +209,7 @@ Another way to create an `Image` is to load an encoded image.
   if (!image.isValid) 
       throw new Exception(image.errorMessage());
   ```
-  > **Key concept:** You can force the loaded image to be a certain type using `LoadFlags`.
+  > **Key concept:** You can force the loaded image to be a certain type using `LoadFlags`, or call `convertTo()` after load.
 
   Here are the possible `LoadFlags`:
   ```d
@@ -238,7 +237,20 @@ Another way to create an `Image` is to load an encoded image.
   Not all load flags are compatible, for example `LOAD_8BIT` and `LOAD_16BIT` cannot be used together.
     
 
-### **2.3 Save an image to a file:**
+### **2.3 Convert to another `PixelType`:**
+
+However, load flags are not the only way to select a `PixelType`, you can provide one explicitely with `convertTo`.
+
+  ```d
+  // Convert to grey + one alpha channel, 16-bit
+  image.convertTo(PixelType.la16); 
+
+  // Convert to RGB + one alpha channel, 8-bit
+  image.convertTo(PixelType.rgba8); 
+  ```
+
+
+### **2.4 Save an image to a file:**
 
   ```d
   Image image;
@@ -270,7 +282,7 @@ Another way to create an `Image` is to load an encoded image.
       throw new Exception("Writing output.png failed");
   ```
 
-### **2.4 Save an image to memory:**
+### **2.5 Save an image to memory:**
 
   ```d
   Image image;
