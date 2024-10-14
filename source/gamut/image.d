@@ -479,7 +479,7 @@ public:
     /// the image lifetime.
     /// Tags: #valid #own #data 
     /// Warning: this return the malloc'ed area, NOT the image data itself.
-    ///          However, with the constraints
+    ///          However, with the constraints ??? it is the same.
     ubyte* disownData() pure 
     {
         assert(isOwned());
@@ -663,7 +663,7 @@ public:
     /// Create a view into existing data.
     /// The image data is considered read/write, and not owned.
     /// No layout constraints are assumed.
-    /// The input scanlines must NOT overlap.
+    /// The input scanlines must NOT overlap. MAYDO: take const as runtime flag?
     /// Params:
     ///    data             Pointer to first scanline pixels.
     ///    layers           Number of layers.

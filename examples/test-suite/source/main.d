@@ -17,6 +17,7 @@ void main(string[] args)
     testIssue63();
     testIssue65();
     testIssue67();
+    testImageFmtCompat();
 }
 
 void testIssue35()
@@ -159,6 +160,29 @@ void testIssue67()
     assert(fabs(img.dotsPerInchX() - 200) < 0.1);
     assert(fabs(img.dotsPerInchY() - 100) < 0.1);
     assert(fabs(img.pixelAspectRatio() - 2) < 0.01);
+}
+
+void testImageFmtCompat()
+{
+    IFImage img = read_image("test-images/issue67.bmp");
+    assert(img.e == 0);
+    assert(img.w == 32);
+    assert(img.h == 32);
+    img.free();
+
+    ubyte[36] greySmiley = 
+    [  0, 255, 255, 255, 255,   0,
+     255, 255,   0,   0, 255, 255,
+     255,   0, 255, 255,   0, 255,
+     255,   0,   0,   0,   0, 255,
+     255, 255,   0,   0, 255, 255,
+       0, 255, 255, 255, 255,   0 ];
+    ubyte e = write_image("temp.png", 6, 6, greySmiley, 1);
+    assert(e == 0);
+    IFInfo info = read_info("temp.png");
+    assert(info.w == 6);
+    assert(info.h == 6);
+    assert(info.c == 1);
 }
 
 /+
