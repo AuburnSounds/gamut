@@ -617,6 +617,24 @@ public:
     alias setSize = createNoInit; // TODO: deprecated that bad name, 
                                   // it sounds like there will be a "resize" with resampling
 
+    // Create an image that is a "reference" of another one.
+    // It is the same, but doesn't own its allocation.
+    Image toRef() pure
+    {
+        Image res;
+        res._error = _error;
+        res._data = _data;
+        res._allocArea = null; // not owned
+        res._type = _type;
+        res._width = _width;
+        res._height = _height;
+        res._pitch = _pitch;
+        res._layoutConstraints = _layoutConstraints;
+        res._layerCount = _layerCount;
+        res._layerOffset = _layerOffset;
+        return res;
+    }
+
     // TODO createView from another Image + a rect
 
     /// Return a view into an existing image layer.
