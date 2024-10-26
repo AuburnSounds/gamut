@@ -293,6 +293,16 @@ However, load flags are not the only way to select a `PixelType`, you can provid
   The returned slice must be freed up with `freeEncodedImage`.
 
 
+
+### **2.6 Convert an image to QOIX for faster load**
+
+```d
+  Image image;
+  image.loadFromFile("input.png");
+  image.saveToFromFile("output.qoix"); // .qoix loads faster
+  ```
+
+
 &nbsp;
 
 
@@ -337,6 +347,48 @@ However, load flags are not the only way to select a `PixelType`, you can provid
   }
   ```
   > **Key concept:** The default is that you do not access pixels in a contiguous manner. See 4. for layout constraints that allow you to get all pixels at once.
+
+
+
+### **3.4 Process pixels:**
+
+Here is how to process pixels of an `rgba8` image in-place.
+
+  ```d
+  void liftGammaGain(ref Image image, 
+                     float lift,  // 0 to 1
+                     float gamma, 
+                     float gain)
+  {
+      assert(image.type == PixelType.rgba8);
+      assert(image.hasData());
+      for (int y = 0; y < image.height(); ++y)
+      {
+          byte* scan = cast(ubyte*) image.scanptr(y);
+          for (int x = 0; x < image.width(); ++x)
+          {
+              float r = scan[4*x + 0] / 255.0f;
+              float g = scan[4*x + 1] / 255.0f;
+              float b = scan[4*x + 2] / 255.0f;
+              float a = scan[4*x + 3] / 255.0f;
+              r = (gain * (r + lift * (1-r)))^(1/gamma);
+              g = (gain * (g + lift * (1-r)))^(1/gamma);
+              b = (gain * (b + lift * (1-r)))^(1/gamma);
+              if (r < 0) r = 0;
+              if (g < 0) g = 0;
+              if (b < 0) b = 0;
+              if (r > 1) r = 1;
+              if (g > 1) g = 1;
+              if (b > 1) b = 1;
+              scan[4*x+0] = cast(ubyte)(r * 255);
+              scan[4*x+1] = cast(ubyte)(g * 255);
+              scan[4*x+2] = cast(ubyte)(b * 255);
+          }
+      }
+  }   
+  ```
+
+  > **Key concept:** `.scanptr()` pointers are untyped.
 
 
 &nbsp;
