@@ -2087,7 +2087,7 @@ unittest
     int width = 4;
     int height = 3;
     int pitch = width * cast(int)ushort.sizeof; 
-    image.createViewFromData(&pixels[0][0], width, height, PixelType.l16, pitch);
+    image.createView(&pixels[0][0], width, height, PixelType.l16, pitch);
     assert(image.isValid);
     assert(!image.isError);
     ushort* l0 = cast(ushort*) image.scanline(0);
@@ -2098,11 +2098,11 @@ unittest
     assert(l2[0..4] == [5, 5, 5, 7]);
 
     // Upside down data
-    image.createViewFromData(&pixels[2][0], width, height, PixelType.l16, -pitch);
+    image.createView(&pixels[2][0], width, height, PixelType.l16, -pitch);
     assert(!image.isError);
 
     // Overlapping scanlines is illegal
-    image.createViewFromData(&pixels[0][0], width, height, PixelType.l16, pitch-1);
+    image.createView(&pixels[0][0], width, height, PixelType.l16, pitch-1);
     assert(image.isError);
 }
 
@@ -2118,7 +2118,7 @@ unittest
     int width = 3;
     int height = 1;
     int pitch = 3 * 3; /* whatever */
-    image.createViewFromData(&pixels[0][0], width, height, PixelType.rgb8, pitch);
+    image.createView(&pixels[0][0], width, height, PixelType.rgb8, pitch);
     assert(!image.isError);
 
     void checkEncode(const(ubyte)[] encoded, bool lossless) nothrow @trusted
@@ -2267,13 +2267,13 @@ unittest
     ];
 
     Image image;
-    image.createLayeredViewFromData(pixels.ptr, 
-                                    3, 
-                                    4,
-                                    2,
-                                    PixelType.l8,
-                                    3,
-                                    12);
+    image.createLayeredView(pixels.ptr, 
+                            3, 
+                            4,
+                            2,
+                            PixelType.l8,
+                            3,
+                            12);
     image.setLayout(LAYOUT_GAPLESS | LAYOUT_VERT_STRAIGHT);
     assert(image.width == 3);
     assert(image.height == 4);

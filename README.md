@@ -154,7 +154,7 @@ Use the `convert` tool to encode QOIX.
 > - `createNoData()` creates a new image with no data pointed to (still has a type, size...).
 
   ```d
-  // Create with zero initialization.
+  // Create with transparent black.
   Image image = Image(640, 480, PixelType.rgba8); 
   image.create(640, 480, PixelType.rgba8);
 
@@ -162,7 +162,7 @@ Use the `convert` tool to encode QOIX.
   image.setSize(640, 480, PixelType.rgba8);
   image.createNoInit(640, 480, PixelType.rgba8);
 
-  // Create view into existing data.
+  // Create view into existing data. Existing data is borrowed.
   image.createView(data.ptr, w, h, PixelType.rgb8, pitchbytes);
   ```
 
