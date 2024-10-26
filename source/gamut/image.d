@@ -694,22 +694,22 @@ public:
     ///    layerOffsetBytes Byte offset between two consecutive layers. Can not be negative.
     ///                     for layers == 0 or layers == 1, this is ignored and 0 is set instead.  
     /// Tags: none.
-    void createViewFromData(void* data, 
-                            int width, 
-                            int height, 
-                            PixelType type,
-                            int pitchInBytes) @system
+    void createView(void* data, 
+                    int width, 
+                    int height, 
+                    PixelType type,
+                    int pitchInBytes) @system
     {
-        createLayeredViewFromData(data, width, height, 1, type, pitchInBytes, 0);        
+        createLayeredView(data, width, height, 1, type, pitchInBytes, 0);        
     }
     ///ditto
-    void createLayeredViewFromData(void* data,
-                                   int width, 
-                                   int height,
-                                   int layers,
-                                   PixelType type,
-                                   int pitchInBytes,
-                                   int layerOffsetBytes) @system
+    void createLayeredView(void* data,
+                           int width, 
+                           int height,
+                           int layers,
+                           PixelType type,
+                           int pitchInBytes,
+                           int layerOffsetBytes) @system
     {
         if (!forgetPreviousUsage(layers, width, height))
             return;
@@ -751,6 +751,8 @@ public:
         _layerOffset = (layers == 0 || layers == 1) ? 0 : layerOffsetBytes;
     }
 
+    deprecated("Use createView instead") alias createViewFromData = createView;
+    deprecated("Use createLayeredView instead") alias createLayeredViewFromData = createLayeredView;
     deprecated("Use createWithNoData instead") alias initWithNoData = createWithNoData;
 
     /// Initialize an image with no data, for example if you wanted an image without the pixel content.

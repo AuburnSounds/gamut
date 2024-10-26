@@ -104,7 +104,7 @@ ubyte write_image(in char[] fname,
     auto type = gamutTypeFromReqChans(reqchans);
     assert(buf.length == reqchans * w * h);
     Image image;
-    image.createViewFromData(cast(ubyte*)(buf.ptr), w, h, type, w * pixelTypeSize(type));
+    image.createView(cast(ubyte*)(buf.ptr), w, h, type, w * pixelTypeSize(type));
     bool success = image.saveToFile(fname);
     return success ? 0 : 1;
 }
@@ -129,7 +129,7 @@ ubyte[] write_image_mem(int fmt,
     auto type = gamutTypeFromReqChans(reqchans);
     assert(buf.length == reqchans * w * h);
     Image image;
-    image.createViewFromData(cast(ubyte*)buf.ptr, w, h, type, w * pixelTypeSize(type));
+    image.createView(cast(ubyte*)buf.ptr, w, h, type, w * pixelTypeSize(type));
     ImageFormat gfmt = ImageFormat.PNG;
     if (fmt == IF_BMP) gfmt = ImageFormat.BMP; 
     if (fmt == IF_TGA) gfmt = ImageFormat.TGA; 

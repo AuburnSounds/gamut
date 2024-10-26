@@ -121,8 +121,8 @@ void testIssue63()
     int pitchInBytes     = w * 4;
     int layerOffsetBytes = w * h * 4;
 
-    image.createLayeredViewFromData(cast(void*) gif.ptr, w, h, frames, PixelType.rgba8,
-                                    pitchInBytes, layerOffsetBytes);
+    image.createLayeredView(cast(void*) gif.ptr, w, h, frames, PixelType.rgba8,
+                            pitchInBytes, layerOffsetBytes);
     image.saveToFile("output/issue63.gif");
 }
 

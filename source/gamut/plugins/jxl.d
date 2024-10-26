@@ -120,11 +120,11 @@ void loadJXL(ref Image image, IOStream *io, IOHandle handle, int page, int flags
     // PERF: modify j40 to at least allow us to steal the allocation, save a copy sometimes
 
     Image view;
-    view.createViewFromData(cast(void*) pixels.data, // const_cast here
-                            pixels.width, 
-                            pixels.height, 
-                            PixelType.rgba8,
-                            pixels.stride_bytes);
+    view.createView(cast(void*) pixels.data, // const_cast here
+                    pixels.width, 
+                    pixels.height, 
+                    PixelType.rgba8,
+                    pixels.stride_bytes);
     image = view.clone();
 
     // TODO: resolution/aspect ratio from JPEG XL

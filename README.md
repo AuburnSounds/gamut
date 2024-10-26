@@ -150,7 +150,7 @@ Use the `convert` tool to encode QOIX.
 > Different ways to create an `Image`:
 > - `create()` or regular constructor `this()` creates a new owned image filled with zeros.
 > - `createNoInit()` or `setSize()` creates a new owned uninitialized image.
-> - `createViewFromData()` creates a view into existing data.
+> - `createView()` creates a view into existing data.
 > - `createNoData()` creates a new image with no data pointed to (still has a type, size...).
 
   ```d
@@ -163,7 +163,7 @@ Use the `convert` tool to encode QOIX.
   image.createNoInit(640, 480, PixelType.rgba8);
 
   // Create view into existing data.
-  image.createViewFromData(data.ptr, w, h, PixelType.rgb8, pitchbytes);
+  image.createView(data.ptr, w, h, PixelType.rgb8, pitchbytes);
   ```
 
  - At creation time, the `Image` forgets about its former life, and leaves any `isError()` state or former data/type
