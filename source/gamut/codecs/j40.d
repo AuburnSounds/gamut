@@ -5056,7 +5056,7 @@ j40_err j40__load_dq_matrix(j40__st *st, int idx, j40__dq_matrix *dqmat)
         }
         for (c = 0; c < 3; ++c) {
             // TODO spec bug: `weight(...)` uses multiple conflicting notations
-            static const byte[64] MAP = 
+            static const byte[64] MAP2 = 
             [
                 // 1..31 from weights4x8, 33..47 from weights4x4, 48..59 interpolated,
                 // 0/32/61..63 directly from parameters, 60 fixed to 1.0
@@ -5069,7 +5069,7 @@ j40_err j40__load_dq_matrix(j40__st *st, int idx, j40__dq_matrix *dqmat)
                 56, 44, 57, 45, 58, 46, 59, 47,
                 24, 25, 26, 27, 28, 29, 30, 31,
             ];
-            for (i = 0; i < 64; ++i) raw[i][c] = scratch[MAP[i]][c];
+            for (i = 0; i < 64; ++i) raw[i][c] = scratch[MAP2[i]][c];
         }
         break;
 

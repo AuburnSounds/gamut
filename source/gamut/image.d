@@ -2093,9 +2093,11 @@ unittest
     ushort* l0 = cast(ushort*) image.scanline(0);
     ushort* l1 = cast(ushort*) image.scanline(1);
     ushort* l2 = cast(ushort*) image.scanline(2);
-    assert(l0[0..4] == [5, 5, 5, 5]);
+    static immutable ushort[4] c0 = [5, 5, 5, 5];
+    static immutable ushort[4] c2 = [5, 5, 5, 7];
+    assert(l0[0..4] == c0);
     assert(l1[1] == 6);
-    assert(l2[0..4] == [5, 5, 5, 7]);
+    assert(l2[0..4] == c2);
 
     // Upside down data
     image.createView(&pixels[2][0], width, height, PixelType.l16, -pitch);
@@ -2121,7 +2123,7 @@ unittest
     image.createView(&pixels[0][0], width, height, PixelType.rgb8, pitch);
     assert(!image.isError);
 
-    void checkEncode(const(ubyte)[] encoded, bool lossless) nothrow @trusted
+    void checkEncode(const(ubyte)[] encoded, bool lossless) nothrow @nogc @trusted
     {
         assert(encoded !is null);
         Image image;
@@ -2133,15 +2135,16 @@ unittest
         assert(image.height == 1);
 
         ubyte* l0 = cast(ubyte*) image.scanptr(0);
+	ubyte[9] c0 = [255, 0, 0, 15, 64, 255, 0, 255, 255];
         if (lossless) 
         {
-            assert(l0[0..9] == [255, 0, 0, 15, 64, 255, 0, 255, 255]);
+            assert(l0[0..9] == c0);
         }
 
         ubyte[] wl0 = cast(ubyte[]) image.scanline(0);
         if (lossless) 
         {
-            assert(wl0 == [255, 0, 0, 15, 64, 255, 0, 255, 255]);
+            assert(wl0 == c0);
         }
     }
 
