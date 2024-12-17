@@ -299,7 +299,7 @@ However, load flags are not the only way to select a `PixelType`, you can provid
 ```d
   Image image;
   image.loadFromFile("input.png");
-  image.saveToFromFile("output.qoix"); // .qoix loads faster
+  image.saveToFile("output.qoix"); // .qoix loads faster
   ```
 
 
