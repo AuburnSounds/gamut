@@ -5,7 +5,8 @@
 
     "dependencies":
     {
-        "intel-intrinsics": "~>1.0"
+        "intel-intrinsics": "~>1.0",
+        "miniz": ">=0.0.0 <2.0.0"
     },
 
     "configurations": [
@@ -18,14 +19,14 @@
             "name": "boost",
             "versions": [ "decodeJPEG", "decodePNG",                                         "decodeTGA", "decodeGIF", "decodeBMP", "decodeJXL",
                           "encodeJPEG", "encodePNG", "encodeDDS",                            "encodeTGA", "encodeGIF", "encodeBMP"              ]
-        },              
+        },
         {
             "name": "just-decode",
             "versions": [ "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX",              "decodeTGA", "decodeGIF", "decodeBMP", "decodeJXL" ]
         },
         {
             "name": "audio-plugin",
-            "versions": [               "encodePNG",                            
+            "versions": [               "encodePNG",
                           "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX" ]
         },
         {

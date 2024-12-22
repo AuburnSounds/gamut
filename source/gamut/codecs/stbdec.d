@@ -1259,7 +1259,7 @@ int stbi__bit_reverse(int v, int bits)
 
 version(decodePNG)
 {
-    import gamut.codecs.miniz;
+    import miniz;
 
     /// Params:
     ///  buffer Input buffer

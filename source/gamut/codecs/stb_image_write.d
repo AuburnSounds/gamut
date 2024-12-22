@@ -108,7 +108,7 @@ version(compileSTBImageWrite):
 import std.math: abs;
 import core.stdc.stdlib: malloc, realloc, free;
 import core.stdc.string: memcpy, memmove;
-import gamut.codecs.miniz;
+import miniz;
 
 nothrow @nogc:
 
