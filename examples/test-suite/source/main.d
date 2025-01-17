@@ -162,6 +162,26 @@ void testIssue67()
     assert(fabs(img.pixelAspectRatio() - 2) < 0.01);
 }
 
+void testIssue76()
+{
+    Image img;
+    if (!img.loadFromFile("test-images/issue76.png"))
+        throw new Exception(img.errorMessage().idup);
+    // Should load as greyscale L16
+    assert(img.isValid);
+    assert(img.type == PixelType.l16);
+    // Should be 2x2
+    assert(img.width == 2 && img.height == 2);
+    ushort[] scan0 = cast(ushort[]) img.scanline(0);
+    ushort[] scan1 = cast(ushort[]) img.scanline(1);
+    assert(scan0.length == 2);
+    assert(scan1.length == 2);
+    assert(scan0[0] == 1875);
+    assert(scan0[1] == 65535);
+    assert(scan1[0] == 0);
+    assert(scan1[1] == 2807);
+}
+
 void testImageFmtCompat()
 {
     IFImage img = read_image("test-images/issue67.bmp");
