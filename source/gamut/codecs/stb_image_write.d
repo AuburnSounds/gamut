@@ -132,7 +132,6 @@ ubyte STBIW_UCHAR(int x)
 enum int stbi_write_png_compression_level = 5;
 enum int stbi_write_force_png_filter = -1;
 
-// Useful?
 enum int stbi__flip_vertically_on_write = 0;
 
 
@@ -630,7 +629,7 @@ int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt,
     return DU[0];
 }
 
-int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int quality) 
+int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int pitch, int quality) 
 {
     // Constants that don't pollute global namespace
     static immutable ubyte[17] std_dc_luminance_nrcodes = [0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0];
@@ -729,6 +728,8 @@ int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp,
     }
 
     quality = quality ? quality : 90;
+
+    // can do 4:4:4 and 4:2:0
     subsample = quality <= 90 ? 1 : 0;
     quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
     quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
@@ -800,11 +801,18 @@ int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp,
                     for(row = y, pos = 0; row < y+16; ++row) {
                         // row >= height => use last input row
                         int clamped_row = (row < height) ? row : height - 1;
-                        int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                        ptrdiff_t rowOfs = clamped_row * pitch;
+
                         for(col = x; col < x+16; ++col, ++pos) {
-                            // if col >= width => use pixel from last input column
-                            int p = base_p + ((col < width) ? col : (width-1))*comp;
-                            float r = dataR[p], g = dataG[p], b = dataB[p];
+
+                            int clamped_col = (col < width) ? col : (width-1);
+                            ptrdiff_t ofs = rowOfs + clamped_col * comp;
+
+                            float r = *(dataR + ofs),
+                                  g = *(dataG + ofs),
+                                  b = *(dataB + ofs);
+
+                            // PERF: separate pixel gather from YUV conversion
                             Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
                             U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
                             V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
@@ -837,15 +845,20 @@ int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp,
                 for(x = 0; x < width; x += 8) {
                     float[64] Y = void;
                     float[64] U = void;
-                    float[64] V = void;                    
+                    float[64] V = void;
                     for(row = y, pos = 0; row < y+8; ++row) {
-                        // row >= height => use last input row
+
                         int clamped_row = (row < height) ? row : height - 1;
-                        int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                        ptrdiff_t rowOfs = clamped_row * pitch;
+
                         for(col = x; col < x+8; ++col, ++pos) {
-                            // if col >= width => use pixel from last input column
-                            int p = base_p + ((col < width) ? col : (width-1))*comp;
-                            float r = dataR[p], g = dataG[p], b = dataB[p];
+
+                            int clamped_col = (col < width) ? col : (width-1);
+                            ptrdiff_t ofs = rowOfs + clamped_col * comp;
+
+                            float r = *(dataR + ofs), 
+                                  g = *(dataG + ofs),
+                                  b = *(dataB + ofs);
                             Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
                             U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
                             V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
@@ -870,11 +883,18 @@ int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp,
     return 1;
 }
 
-public int stbi_write_jpg_to_func(stbi_write_func func, void *context, int x, int y, int comp, const(void) *data, int quality)
+public int stbi_write_jpg_to_func(stbi_write_func func, 
+                                  void *context, 
+                                  int x, 
+                                  int y, 
+                                  int comp, 
+                                  const(void) *data, // first scanline
+                                  int pitch, // pitch in bytes
+                                  int quality)
 {
     stbi__write_context s;
     stbi__start_write_callbacks(&s, func, context);
-    return stbi_write_jpg_core(&s, x, y, comp, cast(void *) data, quality); // const_cast here
+    return stbi_write_jpg_core(&s, x, y, comp, cast(void *) data, pitch, quality); // const_cast here
 }
 
 
