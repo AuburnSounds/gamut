@@ -17,6 +17,7 @@ void main(string[] args)
     testIssue63();
     testIssue65();
     testIssue67();
+    testIssue77();
     testImageFmtCompat();
 }
 
@@ -203,6 +204,14 @@ void testImageFmtCompat()
     assert(info.w == 6);
     assert(info.h == 6);
     assert(info.c == 1);
+}
+
+void testIssue77()
+{
+    Image image;
+    image.loadFromFile("test-images/vst3-compatible.png");
+    image.convertTo(PixelType.rgb8, LAYOUT_VERT_FLIPPED | LAYOUT_BORDER_3);
+    assert(image.saveToFile("temp.jpg"));
 }
 
 /+

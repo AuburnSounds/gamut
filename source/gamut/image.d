@@ -1801,8 +1801,6 @@ private:
 
     // When we look at this Image, what are some constraints that it could spontaneously follow?
     // Also look at existing _layoutConstraints.
-    // Params:
-    //     preferGapless Generates a LayoutConstraints with LAYOUT_GAPLESS rather than other things.
     //
     // Warning: the LayoutConstraints it returns is not necessarilly user-valid, it can contain both
     //          scanline alignment and gapless constraints. This should NEVER be kept as actual constraints.

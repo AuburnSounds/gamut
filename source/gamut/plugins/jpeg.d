@@ -142,7 +142,9 @@ bool saveJPEG(ref const(Image) image, IOStream *io, IOHandle handle, int page, i
                                         image._width, 
                                         image._height, 
                                         components, 
-                                        image._data, quality);
+                                        image._data, 
+                                        image._pitch,
+                                        quality);
 
     return res == 1 && !jio.errored;
 }
