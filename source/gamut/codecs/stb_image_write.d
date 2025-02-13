@@ -129,9 +129,6 @@ ubyte STBIW_UCHAR(int x)
     return cast(ubyte)(x);
 }
 
-enum int stbi_write_png_compression_level = 5;
-enum int stbi_write_force_png_filter = -1;
-
 enum int stbi__flip_vertically_on_write = 0;
 
 
@@ -350,9 +347,8 @@ static void stbiw__encode_png_line(ubyte *pixels,
    }
 }
 
-public ubyte *stbi_write_png_to_mem(const(ubyte*) pixels, int stride_bytes, int x, int y, int n, int *out_len, bool is16bit)
+public ubyte *stbi_write_png_to_mem(const(ubyte*) pixels, int stride_bytes, int x, int y, int n, int *out_len, bool is16bit, int force_filter, int compression_level)
 {
-    int force_filter = stbi_write_force_png_filter;
 
     static immutable int[5] ctype = [ -1, 0, 4, 2, 6 ];
     static immutable ubyte[8] sig = [ 137,80,78,71,13,10,26,10 ];
@@ -410,7 +406,7 @@ public ubyte *stbi_write_png_to_mem(const(ubyte*) pixels, int stride_bytes, int 
       STBIW_MEMMOVE(filt+j*(lineBytes+1)+1, line_buffer, lineBytes);
    }
    STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*(lineBytes+1), &zlen, stbi_write_png_compression_level);
+   zlib = stbi_zlib_compress(filt, y*(lineBytes+1), &zlen, compression_level);
    STBIW_FREE(filt);
    if (!zlib) 
        return null;

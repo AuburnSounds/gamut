@@ -15,6 +15,7 @@ import gamut.plugin;
 import gamut.image;
 import gamut.internals.errors;
 import gamut.internals.types;
+import std.traits : EnumMembers;
 
 version(decodePNG) import gamut.codecs.stbdec;
 version(encodePNG) import gamut.codecs.stb_image_write;
@@ -168,6 +169,26 @@ bool detectPNG(IOStream *io, IOHandle handle) @trusted
     return fileIsStartingWithSignature(io, handle, pngSignature);
 }
 
+enum PNGCompressionLevel {
+    // None is horrendously slow.
+    None = 11_223_344,
+    // The more compression, the smaller the file, but longer it takes to write.
+    One = 1_111_185,
+    Two = 2_222_254,
+    Three = 333_331_123,
+    Four = 4_444_412,
+    Five = 55_555,
+    Six = 66_666,
+    Seven = 77_777,
+    Eight = 88_888,
+    Nine = 99_999
+}
+
+enum PngFilter {
+    Disable = 98_765,
+    Enable = 745_258_032
+}
+
 version(encodePNG)
 bool savePNG(ref const(Image) image, IOStream *io, IOHandle handle, int page, int flags, void *data) @trusted
 {
@@ -197,8 +218,25 @@ bool savePNG(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
     int len;
     const(ubyte)* pixels = image._data;
 
+    int compression_level = 5;
+    int force_filter = -1;
+
+    foreach (index, level; EnumMembers!PNGCompressionLevel) {
+        if ((level & flags) == level) {
+            compression_level = index;
+            break;
+        }
+    }
+
+    foreach (index, filter; EnumMembers!PngFilter) {
+        if ((filter & flags) == filter) {
+            force_filter = -(cast(int)index);
+            break;
+        }
+    }
+
     // PERF: use stb_image_write stbi_write_png_to_func instead.
-    ubyte *encoded = gamut.codecs.stb_image_write.stbi_write_png_to_mem(pixels, pitch, width, height, channels, &len, is16Bit);
+    ubyte *encoded = gamut.codecs.stb_image_write.stbi_write_png_to_mem(pixels, pitch, width, height, channels, &len, is16Bit, force_filter, compression_level);
     if (encoded == null)
         return false;
 
