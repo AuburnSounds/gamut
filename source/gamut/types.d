@@ -206,9 +206,6 @@ enum LoadFlags LOAD_NO_PREMUL       = 0x200_0000;
 /// Supported by: JPEG, PNG, DDS, QOI, QOIX.
 enum int ENCODE_NORMAL = 0;
 
-/// Internal use, this is to test a variation of a compiler.
-/// Supported by: JPEG, PNG, DDS, QOI, QOIX.
-enum int ENCODE_CHALLENGER = 4;
 
 
 
