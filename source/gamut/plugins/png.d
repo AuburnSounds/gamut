@@ -15,7 +15,6 @@ import gamut.plugin;
 import gamut.image;
 import gamut.internals.errors;
 import gamut.internals.types;
-import std.traits : EnumMembers;
 
 version(decodePNG) import gamut.codecs.stbdec;
 version(encodePNG) import gamut.codecs.stb_image_write;
@@ -167,26 +166,6 @@ bool detectPNG(IOStream *io, IOHandle handle) @trusted
 {
     static immutable ubyte[8] pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
     return fileIsStartingWithSignature(io, handle, pngSignature);
-}
-
-enum PNGCompressionLevel {
-    // None is horrendously slow.
-    None = 11_223_344,
-    // The more compression, the smaller the file, but longer it takes to write.
-    One = 1_111_185,
-    Two = 2_222_254,
-    Three = 333_331_123,
-    Four = 4_444_412,
-    Five = 55_555,
-    Six = 66_666,
-    Seven = 77_777,
-    Eight = 88_888,
-    Nine = 99_999
-}
-
-enum PngFilter {
-    Disable = 98_765,
-    Enable = 745_258_032
 }
 
 version(encodePNG)
