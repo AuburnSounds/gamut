@@ -168,7 +168,7 @@ static void stbiw__putc(stbi__write_context *s, ubyte c)
 ubyte * stbi_zlib_compress(ubyte *data, int data_len, int *out_len, int quality)
 {
     size_t outLenSize_t;
-    assert(quality >= 1 && quality <= 9);
+    assert(quality >= 0 && quality <= 9);
     uint comp_flags = TDEFL_COMPUTE_ADLER32 
         | tdefl_create_comp_flags_from_zip_params(quality, MZ_DEFAULT_WINDOW_BITS, MZ_DEFAULT_STRATEGY);
 
