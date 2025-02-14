@@ -197,8 +197,13 @@ bool savePNG(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
     int len;
     const(ubyte)* pixels = image._data;
 
-    int force_filter = ((flags & ENCODE_PNG_FILTER_FAST) == ENCODE_PNG_FILTER_FAST) ? 0 : -1;
-    int compression_level = flags & ~ENCODE_PNG_FILTER_FAST;
+    // Note: not sure if fastest filter?
+    int force_filter = ((flags & ENCODE_PNG_FILTER_FAST) != 0) ? 0 : -1;
+
+    int compression_level = flags & 15;
+    if (compression_level == ENCODE_PNG_COMPRESSION_DEFAULT)
+        compression_level = ENCODE_PNG_COMPRESSION_5;
+    compression_level--;
 
     // PERF: use stb_image_write stbi_write_png_to_func instead.
     ubyte *encoded = gamut.codecs.stb_image_write.stbi_write_png_to_mem(pixels, pitch, width, height, channels, &len, is16Bit, force_filter, compression_level);

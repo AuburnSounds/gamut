@@ -19,6 +19,7 @@ void main(string[] args)
     testIssue67();
     testIssue77();
     testImageFmtCompat();
+    testExtremePNGLevel();
 }
 
 void testIssue35()
@@ -212,6 +213,26 @@ void testIssue77()
     image.loadFromFile("test-images/vst3-compatible.png");
     image.convertTo(PixelType.rgb8, LAYOUT_VERT_FLIPPED | LAYOUT_BORDER_3);
     assert(image.saveToFile("temp.jpg"));
+}
+
+void testExtremePNGLevel()
+{
+    Image image;
+    image.loadFromFile("test-images/issue51cgbi2.png");
+
+    // check some encodes
+    assert(image.saveToFile("qfast.png", ENCODE_PNG_COMPRESSION_FAST | ENCODE_PNG_FILTER_FAST));
+    assert(image.saveToFile("qsmall.png", ENCODE_PNG_COMPRESSION_SMALL));
+    assert(image.saveToFile("q0.png", ENCODE_PNG_COMPRESSION_0));
+    assert(image.saveToFile("q10.png", ENCODE_PNG_COMPRESSION_10));
+    image.loadFromFile("q0.png");
+    assert(image.isValid);
+    image.loadFromFile("qsmall.png");
+    assert(image.isValid);
+    image.loadFromFile("q10.png");
+    assert(image.isValid);
+    image.loadFromFile("qfast.png");
+    assert(image.isValid);
 }
 
 /+

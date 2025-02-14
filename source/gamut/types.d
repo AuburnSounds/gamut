@@ -198,30 +198,47 @@ enum LoadFlags LOAD_NO_PREMUL       = 0x200_0000;
 
 
 
+// Encode flags Bits
+//  ____________________________________________
+// | Bits 0 to 3 | Bit 4      | Bit 5 to 31     |
+// |-------------+------------+-----------------|
+// | zlib level  | PNG filter | unused          |
+// |--------------------------------------------|
 
+/// Do nothing particular. The default when encoding.
+enum int ENCODE_NORMAL                  = 0;
 
-// Encode flags
-
-/// Do nothing particular.
-/// Supported by: JPEG, PNG, DDS, QOI, QOIX.
-enum int ENCODE_NORMAL = 0;
-
-
+/// PNG Encode: Default DEFLATE compression level.
+/// Implementation: This sets the recommended level to
+///                 `ENCODE_PNG_COMPRESSION_5`.
 enum int ENCODE_PNG_COMPRESSION_DEFAULT = 0;
-    
-// The more compression, the smaller the file, but longer it takes to write.
-enum int ENCODE_PNG_COMPRESSION_1 = 1;
-enum int ENCODE_PNG_COMPRESSION_2 = 2;
-enum int ENCODE_PNG_COMPRESSION_3 = 3;
-enum int ENCODE_PNG_COMPRESSION_4 = 4;
-enum int ENCODE_PNG_COMPRESSION_5 = 5;
-enum int ENCODE_PNG_COMPRESSION_6 = 6;
-enum int ENCODE_PNG_COMPRESSION_7 = 7;
-enum int ENCODE_PNG_COMPRESSION_8 = 8;
-enum int ENCODE_PNG_COMPRESSION_9 = 9;
 
-enum int ENCODE_PNG_FILTER_DEFAULT = 0;
-enum int ENCODE_PNG_FILTER_FAST = (1 << 4);
+/// PNG Encode: Recommended fast DEFLATE level.
+enum int ENCODE_PNG_COMPRESSION_FAST    = 2;
+
+/// PNG Encode: Recommended compact DEFLATE level.
+/// You can be a bit more compact with
+/// `ENCODE_PNG_COMPRESSION_10` but not tested all
+/// that much.
+enum int ENCODE_PNG_COMPRESSION_SMALL   = 10;
+
+/// PNG Encode: Specify a DEFLATE compression.
+enum int ENCODE_PNG_COMPRESSION_0  = 1,
+         ENCODE_PNG_COMPRESSION_1  = 2,
+         ENCODE_PNG_COMPRESSION_2  = 3,
+         ENCODE_PNG_COMPRESSION_3  = 4,
+         ENCODE_PNG_COMPRESSION_4  = 5,
+         ENCODE_PNG_COMPRESSION_5  = 6,
+         ENCODE_PNG_COMPRESSION_6  = 7,
+         ENCODE_PNG_COMPRESSION_7  = 8,
+         ENCODE_PNG_COMPRESSION_8  = 9,
+         ENCODE_PNG_COMPRESSION_9  = 10,
+         ENCODE_PNG_COMPRESSION_10 = 11;
+
+/// PNG Encode: Test all filter (default) or just one.
+enum int ENCODE_PNG_FILTER_DEFAULT = 0,
+         ENCODE_PNG_FILTER_SMALL   = 0,
+         ENCODE_PNG_FILTER_FAST    = (1 << 4);
 
 
 
