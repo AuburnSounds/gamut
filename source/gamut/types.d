@@ -206,10 +206,22 @@ enum LoadFlags LOAD_NO_PREMUL       = 0x200_0000;
 /// Supported by: JPEG, PNG, DDS, QOI, QOIX.
 enum int ENCODE_NORMAL = 0;
 
-/// Internal use, this is to test a variation of a compiler.
-/// Supported by: JPEG, PNG, DDS, QOI, QOIX.
-enum int ENCODE_CHALLENGER = 4;
 
+enum int ENCODE_PNG_COMPRESSION_DEFAULT = 0;
+    
+// The more compression, the smaller the file, but longer it takes to write.
+enum int ENCODE_PNG_COMPRESSION_1 = 1;
+enum int ENCODE_PNG_COMPRESSION_2 = 2;
+enum int ENCODE_PNG_COMPRESSION_3 = 3;
+enum int ENCODE_PNG_COMPRESSION_4 = 4;
+enum int ENCODE_PNG_COMPRESSION_5 = 5;
+enum int ENCODE_PNG_COMPRESSION_6 = 6;
+enum int ENCODE_PNG_COMPRESSION_7 = 7;
+enum int ENCODE_PNG_COMPRESSION_8 = 8;
+enum int ENCODE_PNG_COMPRESSION_9 = 9;
+
+enum int ENCODE_PNG_FILTER_DEFAULT = 0;
+enum int ENCODE_PNG_FILTER_FAST = (1 << 4);
 
 
 
