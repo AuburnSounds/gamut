@@ -12,8 +12,8 @@
     "configurations": [
         {
             "name": "boost+mit",
-            "versions": [ "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX",              "decodeTGA", "decodeGIF", "decodeBMP", "decodeJXL",
-                          "encodeJPEG", "encodePNG", "encodeQOI", "encodeQOIX", "encodeDDS", "encodeTGA", "encodeGIF", "encodeBMP"              ]
+            "versions": [ "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX",              "decodeTGA", "decodeGIF", "decodeBMP", "decodeJXL", "decodeSQZ",
+                          "encodeJPEG", "encodePNG", "encodeQOI", "encodeQOIX", "encodeDDS", "encodeTGA", "encodeGIF", "encodeBMP"             , "encodeSQZ"  ]
         },
         {
             "name": "boost",
@@ -27,7 +27,7 @@
         {
             "name": "audio-plugin",
             "versions": [               "encodePNG",
-                          "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX" ]
+                          "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX",                                                                  "decodeSQZ" ]
         },
         {
             "name": "hipreme",
