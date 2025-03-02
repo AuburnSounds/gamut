@@ -172,9 +172,14 @@ bool saveSQZ(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
     SQZ_image_descriptor_t desc;
     desc.width = image.width;
     desc.height = image.height;
-    desc.color_mode = SQZ_COLOR_MODE_OKLAB; // Oklab, TODO check with 
-    desc.dwt_levels = 7; // TODO tune one day
-    desc.subsampling = 1; // TODO Is worth it?
+
+    // Both SQZ_COLOR_MODE_YCOCG_R and SQZ_COLOR_MODE_LOG_L1
+    // are faster, but look less good in our tests.
+    desc.color_mode = SQZ_COLOR_MODE_OKLAB;
+
+    desc.dwt_levels = 7; // 7 is better for size, without adverse speed consequence
+    desc.subsampling = 1; // very much worth it
+    desc.scan_order = SQZ_SCAN_ORDER_SNAKE; // wins a bit according..
 
     // TODO: SQZ encoder should take a pitch
     ubyte* content = cast(ubyte*) image.allPixelsAtOnce.ptr;
