@@ -172,7 +172,7 @@ struct SQZ_list_node_t
 {
     ushort x;             /* Horizontal coordinate relative to the origin of the subband */
     ushort y;             /* Vertical coordinate relative to the origin of the subband */
-    int next;               /* Pointer to the next node in the list */
+    int next;             /* Pointer to the next node in the list */
 }
 
 // Structure containing the pre-allocated node cache used by all the lists in a subband
@@ -2142,6 +2142,17 @@ SQZ_status_t SQZ_encode(void* source, void* dest, SQZ_image_descriptor_t* descri
     return SQZ_RESULT_OK;
 }
 
+/**
+* \brief           Decode an image
+* \note            Call this function with `dest_size` set to 0 to receive an image descriptor and the required buffer size,
+*                  if the return result is \ref SQZ_BUFFER_TOO_SMALL, any other result will imply a decoding error
+* \param[in]       source : Pointer to the input compressed data
+* \param[out]      dest : Pointer to the buffer that will receive the decompressed pixel data
+* \param[in]       src_size: Pointer to the size of the input buffer
+* \param[in,out]   dest_size : Pointer to the size of the output buffer (or 0 to request the appropriate size)
+* \param[in,out]   descriptor : Pointer to an image descriptor, to be filled with information about the image
+* \return          \ref SQZ_RESULT_OK on success, member of \ref SQZ_status_t otherwise
+*/
 SQZ_status_t
 SQZ_decode(void* source, void* dest, size_t src_size, size_t* dest_size, SQZ_image_descriptor_t* descriptor) 
 {
