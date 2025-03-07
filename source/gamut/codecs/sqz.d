@@ -92,6 +92,7 @@ SOFTWARE.
 import core.stdc.string: memset, memcpy;
 import core.stdc.stdlib: calloc, free, malloc;
 import core.bitop: bsr;
+import inteli.avx2intrin;
 
 version(decodeSQZ)
     version = enableSQZ;
@@ -1313,6 +1314,34 @@ ubyte SQZ_linear_i32_to_sRGB_u8(int v)
     return cast(ubyte)(base + ((interpoland * (SQZ_linear_to_sRGB[offset + 1] - base)) >> SQZ_COLOR_LINEAR_PRECISION));
 }
 
+__m128i mmSQZ_linear_i32_to_sRGB_u8(__m128i rgbx) 
+{
+    __m128i zero = _mm_setzero_si128();
+    rgbx = _mm_max_epi32(zero, rgbx);
+
+    __m128i maximum = _mm_set1_epi32(SQZ_COLOR_LINEAR_MAX-1);
+    rgbx = _mm_min_epi32(rgbx, maximum);
+
+    __m128i vmul = _mm_multrunc_epi32x(rgbx, _mm_set1_epi32(SQZ_COLOR_LINEAR_TO_SRGB_LUT_SIZE));
+    __m128i offset = _mm_srai_epi32(vmul, SQZ_COLOR_LINEAR_PRECISION);
+    __m128i interpoland = vmul & _mm_set1_epi32(SQZ_COLOR_LINEAR_MAX);
+
+    __m128i base = _mm_setr_epi32(SQZ_linear_to_sRGB[offset[0]],
+                                  SQZ_linear_to_sRGB[offset[1]],
+                                  SQZ_linear_to_sRGB[offset[2]],
+                                  0);
+
+    __m128i coeff2 = _mm_setr_epi32(SQZ_linear_to_sRGB[offset[0]+1],
+                                    SQZ_linear_to_sRGB[offset[1]+1],
+                                    SQZ_linear_to_sRGB[offset[2]+1],
+                                    0);
+    __m128i R = base +   _mm_srai_epi32( (_mm_multrunc_epi32x( interpoland , (coeff2 - base) )), SQZ_COLOR_LINEAR_PRECISION);
+
+    R = _mm_packs_epi32(R, zero);
+    R = _mm_packus_epi16(R, zero);
+    return R;
+}
+
 int SQZ_i32_cbrt_01(int v) 
 {
     if (v <= 0) 
@@ -1333,7 +1362,9 @@ int SQZ_i32_cbrt_01(int v)
 }
 
 enum SQZ_COLOR_OKLAB_PRECISION = 12;
-enum SQZ_COLOR_OKLAB_MUL = (1L << (SQZ_COLOR_LINEAR_PRECISION - SQZ_COLOR_OKLAB_PRECISION));
+enum SQZ_COLOR_OKLAB_PRECISION_X2 = SQZ_COLOR_OKLAB_PRECISION * 2;
+enum SQZ_COLOR_OKLAB_MUL = (1 << (SQZ_COLOR_LINEAR_PRECISION - SQZ_COLOR_OKLAB_PRECISION));
+static assert(SQZ_COLOR_OKLAB_MUL == 16);
 enum SQZ_COLOR_OKLAB_LEVEL_OFFSET = (1 << (SQZ_COLOR_OKLAB_PRECISION - 1));
 
 void SQZ_color_process_oklab(SQZ_context_t* ctx, void* buffer, int read) 
@@ -1343,11 +1374,13 @@ void SQZ_color_process_oklab(SQZ_context_t* ctx, void* buffer, int read)
                            b = ctx.plane[2].data;
     ubyte* ptr = cast(ubyte*)buffer;
     size_t length = ctx.image.width * ctx.image.height;
-    if (read) {
-        for (size_t i = 0u; i < length; ++i) {
-            int R = cast(int)SQZ_sRGB_to_linear[*ptr++];
-            int G = cast(int)SQZ_sRGB_to_linear[*ptr++];
-            int B = cast(int)SQZ_sRGB_to_linear[*ptr++];
+    if (read) 
+    {
+        for (size_t i = 0u; i < length; ++i) 
+        {
+            int R = SQZ_sRGB_to_linear[*ptr++];
+            int G = SQZ_sRGB_to_linear[*ptr++];
+            int B = SQZ_sRGB_to_linear[*ptr++];
             int l = SQZ_i32_cbrt_01(cast(int)((27015L * R + 35149L * G +  3372L * B) >> SQZ_COLOR_LINEAR_PRECISION));
             int m = SQZ_i32_cbrt_01(cast(int)((13887L * R + 44610L * G +  7038L * B) >> SQZ_COLOR_LINEAR_PRECISION));
             int s = SQZ_i32_cbrt_01(cast(int)(( 5787L * R + 18462L * G + 41286L * B) >> SQZ_COLOR_LINEAR_PRECISION));
@@ -1358,22 +1391,106 @@ void SQZ_color_process_oklab(SQZ_context_t* ctx, void* buffer, int read)
     }
     else 
     {
-        for (size_t i = 0u; i < length; ++i) 
+        static if (true)
         {
-            SQZ_dwt_coefficient_t L_ = cast(short)( (*L++) + SQZ_COLOR_OKLAB_LEVEL_OFFSET ), 
-                                  a_ = (*a++), 
-                                  b_ = (*b++);
-            long l_ = L_ * SQZ_COLOR_OKLAB_MUL + ((25974L * a_ + 14143L * b_) >> SQZ_COLOR_OKLAB_PRECISION);
-            long m_ = L_ * SQZ_COLOR_OKLAB_MUL + ((-6918L * a_ -  4185L * b_) >> SQZ_COLOR_OKLAB_PRECISION);
-            long s_ = L_ * SQZ_COLOR_OKLAB_MUL + ((-5864L * a_ - 84638L * b_) >> SQZ_COLOR_OKLAB_PRECISION);
-            long l = (l_ * l_ * l_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
-            long m = (m_ * m_ * m_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
-            long s = (s_ * s_ * s_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
-            *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((267169L * l - 216771L * m +  15137L * s) >> SQZ_COLOR_LINEAR_PRECISION));
-            *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((-83127L * l + 171030L * m -  22368L * s) >> SQZ_COLOR_LINEAR_PRECISION));
-            *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((  -275L * l -  46099L * m + 111909L * s) >> SQZ_COLOR_LINEAR_PRECISION));
+            // reference version
+            for (size_t i = 0u; i < length; ++i) 
+            {
+                SQZ_dwt_coefficient_t L_ = cast(short)( (*L++) + SQZ_COLOR_OKLAB_LEVEL_OFFSET ), 
+                                      a_ = (*a++), 
+                                      b_ = (*b++);
+                long l_ = L_ * SQZ_COLOR_OKLAB_MUL + ((25974L * a_ + 14143L * b_) >> SQZ_COLOR_OKLAB_PRECISION);
+                long m_ = L_ * SQZ_COLOR_OKLAB_MUL + ((-6918L * a_ -  4185L * b_) >> SQZ_COLOR_OKLAB_PRECISION);
+                long s_ = L_ * SQZ_COLOR_OKLAB_MUL + ((-5864L * a_ - 84638L * b_) >> SQZ_COLOR_OKLAB_PRECISION);
+                long l = (l_ * l_ * l_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
+                long m = (m_ * m_ * m_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
+                long s = (s_ * s_ * s_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
+
+                static if (true)
+                {
+                    *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((267169L * l - 216771L * m +  15137L * s) >> SQZ_COLOR_LINEAR_PRECISION));
+                    *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((-83127L * l + 171030L * m -  22368L * s) >> SQZ_COLOR_LINEAR_PRECISION));
+                    *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((  -275L * l -  46099L * m + 111909L * s) >> SQZ_COLOR_LINEAR_PRECISION));
+                }
+                else
+                {
+                    int R = cast(int)((267169L * l - 216771L * m +  15137L * s) >> SQZ_COLOR_LINEAR_PRECISION);
+                    int G = cast(int)((-83127L * l + 171030L * m -  22368L * s) >> SQZ_COLOR_LINEAR_PRECISION);
+                    int B = cast(int)((  -275L * l -  46099L * m + 111909L * s) >> SQZ_COLOR_LINEAR_PRECISION);
+                    __m128i RGBX = _mm_setr_epi32(R, G, B, 0);
+
+                    byte16 b16 = cast(byte16) mmSQZ_linear_i32_to_sRGB_u8(RGBX);
+                    *ptr++ = b16[0];
+                    *ptr++ = b16[1];
+                    *ptr++ = b16[2];
+                }
+            }
+        }
+        else
+        {
+
+            __m128i L_MUL = _mm_set1_epi32(12);
+            __m128i A_MUL = _mm_setr_epi32(25974, -6918, -5864, 0);  // 16-bit signed
+            __m128i B_MUL = _mm_setr_epi32(14143, -4185, -84638, 0); // 18-bit signed
+
+            __m128i l_MUL = _mm_setr_epi32(  267169,   -83127,   -275, 0);
+            __m128i m_MUL = _mm_setr_epi32( -216771,   171030, -46099, 0);
+            __m128i s_MUL = _mm_setr_epi32(   15137,   -22368, 111909, 0);
+
+            // PERF: it's cool that we have only integers, however this need SSE4.1 or AVX to perform
+            // while simply going through SSE2 float would probably be efficient.
+
+            for (size_t i = 0; i < length; ++i) 
+            {
+                int L_ = (*L++) + SQZ_COLOR_OKLAB_LEVEL_OFFSET; // 17-bit signed
+                int a_ = (*a++); // 16-bit signed
+                int b_ = (*b++); // 16-bit signed
+                int L_x12 = L_ * SQZ_COLOR_OKLAB_MUL; // 21 bits maximum
+
+                __m128i mmA = _mm_set1_epi32(a_);
+                __m128i mmB = _mm_set1_epi32(b_);
+
+                __m256i R = _mm256_add_epi64( _mm256_mul_epi32x(mmA, A_MUL), _mm256_mul_epi32x(mmB, B_MUL)); // 18+16+1 bits signed max
+                R = _mm256_srli_epi64(R, SQZ_COLOR_OKLAB_PRECISION); // 18+16+1-12 = 23 bits signed max
+                R = _mm256_add_epi64(R, _mm256_set1_epi64(L_x12)); // 24 signed bits max, probably less
+
+                // pow 3
+                R[0] = R[0] * R[0] * R[0];
+                R[1] = R[1] * R[1] * R[1];
+                R[2] = R[2] * R[2] * R[2];
+                R = _mm256_srli_epi64(R, SQZ_COLOR_OKLAB_PRECISION_X2);
+               // __m128i mmLMS = _mm_setr_epi32(R[0], R[1], R[2], 0);
+
+                __m256i rgb = _mm256_mul_epi32x(_mm_set1_epi32(cast(int)(R[0])), l_MUL);
+                rgb = _mm256_add_epi64(rgb, _mm256_mul_epi32x(_mm_set1_epi32(cast(int)(R[1])), m_MUL));
+                rgb = _mm256_add_epi64(rgb, _mm256_mul_epi32x(_mm_set1_epi32(cast(int)(R[2])), s_MUL));
+                rgb = _mm256_srli_epi64(rgb, SQZ_COLOR_LINEAR_PRECISION);
+
+                *ptr++ = SQZ_linear_i32_to_sRGB_u8( cast(int)rgb[0]);
+                *ptr++ = SQZ_linear_i32_to_sRGB_u8( cast(int)rgb[1]);
+                *ptr++ = SQZ_linear_i32_to_sRGB_u8( cast(int)rgb[2]); // PERF SQZ_linear_i32_to_sRGB_u8
+            }
         }
     }
+}
+
+
+__m128i _mm_multrunc_epi32x(__m128i A, __m128i B)
+{
+    __m128i r;
+    r[0] = A[0] * B[0];
+    r[1] = A[1] * B[1];
+    r[2] = A[2] * B[2];
+    r[3] = A[3] * B[3];
+    return r;
+}
+
+
+__m256i _mm256_mul_epi32x(__m128i A, __m128i B)
+{
+    __m128i lo = _mm_mul_epi32(A, B);
+    __m128i hi = _mm_mul_epi32(_mm_srli_si128!8(A), _mm_srli_si128!8(B));
+    return _mm256_set_m128i(hi, lo);
 }
 
 enum SQZ_COLOR_LOGL1_LEVEL_OFFSET = 221;
@@ -1418,7 +1535,8 @@ void SQZ_color_process_logl1(SQZ_context_t* ctx, void* buffer, int read)
     }
 }
 
-
+// warning: read == 0 means an image is decoded
+//          read == 1 means an image is encoded
 void SQZ_color_process(SQZ_context_t* ctx, void* buffer, int read) 
 {
     switch (ctx.image.color_mode) 

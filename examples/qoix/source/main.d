@@ -43,7 +43,8 @@ int main(string[] args)
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
 
-        image.premultiply();
+        image.convertTo(PixelType.rgb8);
+        image.setLayout(LAYOUT_GAPLESS | LAYOUT_VERT_STRAIGHT);
 
         int width = image.width;
         int height = image.height;
@@ -54,7 +55,7 @@ int main(string[] args)
         writefln(" (%s)", image.type);
 
         ubyte[] qoix_encoded;
-        double qoix_encode_ms = measure( { qoix_encoded = image.saveToMemory(ImageFormat.QOIX); } );
+        double qoix_encode_ms = measure( { qoix_encoded = image.saveToMemory(ImageFormat.SQZ); } );
         scope(exit) freeEncodedImage(qoix_encoded);
 
         if (qoix_encoded is null)

@@ -179,7 +179,7 @@ bool saveSQZ(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
 
     desc.dwt_levels = 7; // 7 is better for size, without adverse speed consequence
     desc.subsampling = 1; // very much worth it
-    desc.scan_order = SQZ_SCAN_ORDER_SNAKE; // wins a bit according..
+    desc.scan_order = SQZ_SCAN_ORDER_SNAKE; // wins a bit according to encode.su
 
     // TODO: SQZ encoder should take a pitch
     ubyte* content = cast(ubyte*) image.allPixelsAtOnce.ptr;
