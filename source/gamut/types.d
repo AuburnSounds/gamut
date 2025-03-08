@@ -209,6 +209,8 @@ enum LoadFlags LOAD_NO_PREMUL       = 0x200_0000;
 // |             |            | Fixed point number |              |
 // |             |            | in 3.5 format      |              |
 // |-----------------------------------------------|--------------|
+// Note: keep in sync with examples/convert/main.d to use them
+//       from the command-line.
 
 /// Do nothing particular. The default when encoding.
 enum int ENCODE_NORMAL                  = 0;

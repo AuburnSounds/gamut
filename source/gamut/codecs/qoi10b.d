@@ -490,7 +490,7 @@ ubyte* qoi10b_decode(const(void)* data, int size, qoi_desc *desc, int channels)
 
     if (desc.width == 0 || desc.height == 0 || 
         desc.channels < 1 || desc.channels > 4 ||
-        desc.colorspace > 1 ||
+        desc.colorspace > 2 ||
         desc.bitdepth != 10 ||
         qoix_version > 1 ||
         desc.compression != QOIX_COMPRESSION_NONE ||
