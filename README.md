@@ -34,6 +34,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 
 ## Changelog
 
+- **v3.3** Added [SQZ](https://github.com/MarcioPais/SQZ) input and output. A MIT-licensed codec that guetzli JPEG by about 30%! It also encodes faster, but decodes 2x slower than JPEG. Quality comparisons [here](https://encode.su/threads/4183-SQZ-Low-complexity-scalable-lossless-and-lossy-image-compression-library).
 - **v3** Added premultiplied alpha pixel types. **BREAKING**.
     * Decoders are now allowed to return any type if you do not specify `LOAD_PREMUL` or `LOAD_NO_PREMUL`.
       Update your loading code. 
