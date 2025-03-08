@@ -12,9 +12,12 @@ void usage()
     writeln;
     writeln("Params:");
     writeln("  -i           Specify an input file");
+    writeln("  --grey       Convert to greyscale before encoding");
+    writeln("  --rgb        Convert to RGB(A) before encoding");
+    writeln("  -f/--flag    Specify encode flags to Gamut (eg: --flag ENCODE_SQZ_QUALITY_BPP1_5)");
     writeln("  -b/--bitness Change bitness of file");
-    writeln("  -p/--premul  Encode with premultiplied alpha");
-    writeln("  --unpremul  Encode with unpremultiplied alpha");
+    writeln("  -p/--premul  Encode with premultiplied alpha (if any alpha)");
+    writeln("  --unpremul   Encode with unpremultiplied alpha");
     writeln("  -h           Shows this help");
     writeln;
 }
@@ -28,7 +31,13 @@ int main(string[] args)
         bool help = false;
         bool premul = false;
         bool unpremul = false;
+        bool forceGrey = false;
+        bool forceRgb = false;
         int bitness = -1; // auto
+
+        assert(ENCODE_NORMAL == 0);
+        int encodeFlags = ENCODE_NORMAL;
+
 
         for(int i = 1; i < args.length; ++i)
         {
@@ -45,13 +54,26 @@ int main(string[] args)
             {
                 premul = true;                
             }
-            else if (arg == "-p" || arg == "--unpremul")
+            else if (arg == "--unpremul")
             {
                 unpremul = true;                
             }
             else if (arg == "-h")
             {
                 help = true;
+            }
+            else if (arg == "--grey")
+            {
+                forceGrey = true;
+            }
+            else if (arg == "--rgb")
+            {
+                forceRgb = true;
+            }
+            else if (arg == "-f" || arg == "--flag")
+            {
+                ++i;
+                encodeFlags |= convertEncodeFlagStringToValue(args[i]);
             }
             else
             {
@@ -67,6 +89,9 @@ int main(string[] args)
             }
         }
 
+        if (forceRgb && forceGrey)
+            throw new Exception("Can't use --grey and --rgb at the same time");
+
         if (help || input is null || output is null)
         {
             usage();
@@ -77,6 +102,8 @@ int main(string[] args)
         Image* result = &image;
 
         image.loadFromFile(input, LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
+
+      
 
 
         if (image.isError)
@@ -89,11 +116,14 @@ int main(string[] args)
             image.convertTo8Bit();
         else if (bitness == 16)
             image.convertTo16Bit();
+        if (forceRgb)
+            image.convertToRGB();
+        else if (forceGrey)
+            image.convertToGreyscale();
 
         if (premul && unpremul) throw new Exception("Cannot have both --premul and --unpremul");
         if (premul) image.premultiply();
         if (unpremul) image.unpremultiply();
-
 
         writefln("Opened %s", input);
         writefln(" - width      = %s", image.width);
@@ -101,7 +131,10 @@ int main(string[] args)
         writefln(" - layers     = %s", image.layers);
         writefln(" - type       = %s", image.type);
 
-        bool r = result.saveToFile(output);
+        // TODO: SQZ encoder doesn't support any layout yet
+        image.setLayout(LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
+
+        bool r = result.saveToFile(output, encodeFlags);
         if (!r)
         {
             throw new Exception("Couldn't save file " ~ output);
@@ -117,3 +150,52 @@ int main(string[] args)
         return 1;
     }
 }
+
+
+int convertEncodeFlagStringToValue(string s)
+{
+    if (s in allEncodeFlags)
+        return allEncodeFlags[s];
+    else
+        throw new Exception("Unknown encode flag: " ~ s);
+}
+
+// Note: keep in sync with types.d
+
+immutable int[string] allEncodeFlags = 
+[
+    "ENCODE_NORMAL": 0,
+    
+    "ENCODE_PNG_COMPRESSION_DEFAULT": 0,
+    "ENCODE_PNG_COMPRESSION_FAST":    2,
+    "ENCODE_PNG_COMPRESSION_SMALL":  10,
+
+    "ENCODE_PNG_COMPRESSION_0":       1,
+    "ENCODE_PNG_COMPRESSION_1":       2,
+    "ENCODE_PNG_COMPRESSION_2":       3,
+    "ENCODE_PNG_COMPRESSION_3":       4,
+    "ENCODE_PNG_COMPRESSION_4":       5,
+    "ENCODE_PNG_COMPRESSION_5":       6,
+    "ENCODE_PNG_COMPRESSION_6":       7,
+    "ENCODE_PNG_COMPRESSION_7":       8,
+    "ENCODE_PNG_COMPRESSION_8":       9,
+    "ENCODE_PNG_COMPRESSION_9":       10,
+    "ENCODE_PNG_COMPRESSION_10":      11,
+
+    "ENCODE_PNG_FILTER_DEFAULT":      0,
+    "ENCODE_PNG_FILTER_SMALL":        0,
+    "ENCODE_PNG_FILTER_FAST":  (1 << 4),
+
+
+    "ENCODE_SQZ_QUALITY_DEFAULT":         0, 
+    "ENCODE_SQZ_QUALITY_BPP1_0":  0x20 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP1_25": 0x28 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP1_5":  0x30 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP1_75": 0x38 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP2_0":  0x40 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP2_25": 0x48 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP2_5":  0x50 << 5, 
+    "ENCODE_SQZ_QUALITY_BPP2_75": 0x58 << 5, 
+    "ENCODE_SQZ_QUALITY_MAX":     0xff << 5,
+];
+  
