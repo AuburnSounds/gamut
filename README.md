@@ -274,7 +274,8 @@ However, load flags are not the only way to select a `PixelType`, you can provid
       DDS,
       TGA,
       GIF,
-      JXL
+      JXL,
+      SQZ
   }
   ```
 
