@@ -41,7 +41,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
     * Decoders are now allowed to return any type if you do not specify `LOAD_PREMUL` or `LOAD_NO_PREMUL`.
       Update your loading code. 
     * Introduce `image.premultiply()` and `image.unpremultiply()`.
-    * QOIX supports encoding premultiplied. Saves space and decoding times for transparent overlays.
+    * QOIX supports encoding premultiplied. Saves space and decoding times for transparent overlays. Only save space for 8-bit though.
 - **v2.6** Added JPEG XL input. 8-bit, no alpha, `cjxl --effort 4` or lower, raw streams not ISO BMFF.
 - **v2.5** Added BMP input.
 - **v2.4** Added BMP output.
