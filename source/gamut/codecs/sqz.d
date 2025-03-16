@@ -2183,7 +2183,7 @@ SQZ_status_t SQZ_schedule_task(SQZ_context_t* ctx, SQZ_init_subband_fn init, SQZ
             }
         }
         ++round;
-    };
+    }
     free(scan.workspace);
     return SQZ_RESULT_OK;
 }
