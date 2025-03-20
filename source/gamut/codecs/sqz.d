@@ -1201,7 +1201,7 @@ void SQZ_color_process_ycocg_r(SQZ_context_t* ctx, void* buffer, int read)
                                   Co_ = (*Co++), 
                                   Cg_ = (*Cg++);
             SQZ_dwt_coefficient_t B = cast(short) ( Y_ + ((1 - Cg_) >> 1) - (Co_ >> 1) );
-            SQZ_dwt_coefficient_t G = cast(short) ( Y_ - ((-Cg_) >> 1) );
+            SQZ_dwt_coefficient_t G = cast(short) ( Y_ - ((-cast(int)Cg_) >> 1) );
             SQZ_dwt_coefficient_t R = cast(short) ( Co_ + B );
             *ptr++ = SQZ_COLOR_CLIP(R);
             *ptr++ = SQZ_COLOR_CLIP(G);
@@ -1655,7 +1655,7 @@ void SQZ_dwt_5_3i_horizontal_pass(SQZ_dwt_coefficient_t* data, SQZ_dwt_coefficie
         cf0 += (cf1 + cf3 + 2) >> 2;
         l_band[i] = cast(short)cf0;
     }
-    cf3 = odds[w] + (odd_w ? ((-(evens[w] + evens[w + 1u])) >> 1) : -evens[w]);
+    cf3 = odds[w] + (odd_w ? ((-(evens[w] + evens[w + 1u])) >> 1) : -cast(int)evens[w]);
     h_band[w] = cast(short)cf3;
     l_band[w] = cast(short)( evens[w] + ((h_band[w - 1u] + cf3 + 2) >> 2) );
     if (odd_w) {
@@ -1752,7 +1752,7 @@ void SQZ_idwt_5_3i_horizontal_pass(SQZ_dwt_coefficient_t* data, SQZ_dwt_coeffici
     if (odd_w) {
         evens[w + 1] = cast(short)( l_band[w + 1] - ((h_band[w] + 1) >> 1) );
     }
-    odds[w] = cast(short)(h_band[w] - (odd_w ? ((-(evens[w] + evens[w + 1u])) >> 1) : -evens[w]) );
+    odds[w] = cast(short)(h_band[w] - (odd_w ? ((-(evens[w] + evens[w + 1u])) >> 1) : -cast(int)evens[w]) );
     for (i = 0u; i < half_w; ++i) {
         data[2u * i] = evens[i];
         data[2u * i + 1u] = odds[i];
