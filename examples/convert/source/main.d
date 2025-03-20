@@ -13,7 +13,9 @@ void usage()
     writeln("Params:");
     writeln("  -i           Specify an input file");
     writeln("  --grey       Convert to greyscale before encoding");
-    writeln("  --rgb        Convert to RGB(A) before encoding");
+    writeln("  --rgb        Convert to RGB before encoding");
+    writeln("  --alpha      Force alpha channel before encoding");
+    writeln("  --drop-alpha Drop alpha channel before encoding");
     writeln("  -f/--flag    Specify encode flags to Gamut (eg: --flag ENCODE_SQZ_QUALITY_BPP1_5)");
     writeln("  -b/--bitness Change bitness of file");
     writeln("  -p/--premul  Encode with premultiplied alpha (if any alpha)");
@@ -33,6 +35,8 @@ int main(string[] args)
         bool unpremul = false;
         bool forceGrey = false;
         bool forceRgb = false;
+        bool forceAlpha = false;
+        bool forceNoAlpha = false;
         int bitness = -1; // auto
 
         assert(ENCODE_NORMAL == 0);
@@ -52,11 +56,11 @@ int main(string[] args)
             }
             else if (arg == "-p" || arg == "--premul")
             {
-                premul = true;                
+                premul = true;
             }
             else if (arg == "--unpremul")
             {
-                unpremul = true;                
+                unpremul = true;
             }
             else if (arg == "-h")
             {
@@ -69,6 +73,14 @@ int main(string[] args)
             else if (arg == "--rgb")
             {
                 forceRgb = true;
+            }
+            else if (arg == "--alpha")
+            {
+                forceAlpha = true;
+            }
+            else if (arg == "--drop-alpha")
+            {
+                forceNoAlpha = true;
             }
             else if (arg == "-f" || arg == "--flag")
             {
@@ -91,6 +103,9 @@ int main(string[] args)
 
         if (forceRgb && forceGrey)
             throw new Exception("Can't use --grey and --rgb at the same time");
+
+        if (forceAlpha && forceNoAlpha)
+            throw new Exception("Can't use --alpha and --drop-alpha at the same time");
 
         if (help || input is null || output is null)
         {
@@ -116,10 +131,16 @@ int main(string[] args)
             image.convertTo8Bit();
         else if (bitness == 16)
             image.convertTo16Bit();
+
         if (forceRgb)
             image.convertToRGB();
         else if (forceGrey)
             image.convertToGreyscale();
+
+        if (forceAlpha)
+            image.addAlphaChannel();
+        else if (forceNoAlpha)
+            image.dropAlphaChannel();
 
         if (premul && unpremul) throw new Exception("Cannot have both --premul and --unpremul");
         if (premul) image.premultiply();
@@ -162,40 +183,46 @@ int convertEncodeFlagStringToValue(string s)
 
 // Note: keep in sync with types.d
 
-immutable int[string] allEncodeFlags = 
-[
-    "ENCODE_NORMAL": 0,
-    
-    "ENCODE_PNG_COMPRESSION_DEFAULT": 0,
-    "ENCODE_PNG_COMPRESSION_FAST":    2,
-    "ENCODE_PNG_COMPRESSION_SMALL":  10,
+enum allEncodeFlags = buildEncodeFlags();
 
-    "ENCODE_PNG_COMPRESSION_0":       1,
-    "ENCODE_PNG_COMPRESSION_1":       2,
-    "ENCODE_PNG_COMPRESSION_2":       3,
-    "ENCODE_PNG_COMPRESSION_3":       4,
-    "ENCODE_PNG_COMPRESSION_4":       5,
-    "ENCODE_PNG_COMPRESSION_5":       6,
-    "ENCODE_PNG_COMPRESSION_6":       7,
-    "ENCODE_PNG_COMPRESSION_7":       8,
-    "ENCODE_PNG_COMPRESSION_8":       9,
-    "ENCODE_PNG_COMPRESSION_9":       10,
-    "ENCODE_PNG_COMPRESSION_10":      11,
+int[string] buildEncodeFlags()
+{
+    int[string] flags = 
+    [
+        "ENCODE_NORMAL": 0,
+        
+        "ENCODE_PNG_COMPRESSION_DEFAULT": 0,
+        "ENCODE_PNG_COMPRESSION_FAST":    2,
+        "ENCODE_PNG_COMPRESSION_SMALL":  10,
 
-    "ENCODE_PNG_FILTER_DEFAULT":      0,
-    "ENCODE_PNG_FILTER_SMALL":        0,
-    "ENCODE_PNG_FILTER_FAST":  (1 << 4),
+        "ENCODE_PNG_COMPRESSION_0":       1,
+        "ENCODE_PNG_COMPRESSION_1":       2,
+        "ENCODE_PNG_COMPRESSION_2":       3,
+        "ENCODE_PNG_COMPRESSION_3":       4,
+        "ENCODE_PNG_COMPRESSION_4":       5,
+        "ENCODE_PNG_COMPRESSION_5":       6,
+        "ENCODE_PNG_COMPRESSION_6":       7,
+        "ENCODE_PNG_COMPRESSION_7":       8,
+        "ENCODE_PNG_COMPRESSION_8":       9,
+        "ENCODE_PNG_COMPRESSION_9":       10,
+        "ENCODE_PNG_COMPRESSION_10":      11,
+
+        "ENCODE_PNG_FILTER_DEFAULT":      0,
+        "ENCODE_PNG_FILTER_SMALL":        0,
+        "ENCODE_PNG_FILTER_FAST":  (1 << 4),
 
 
-    "ENCODE_SQZ_QUALITY_DEFAULT":         0, 
-    "ENCODE_SQZ_QUALITY_BPP1_0":  0x20 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP1_25": 0x28 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP1_5":  0x30 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP1_75": 0x38 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP2_0":  0x40 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP2_25": 0x48 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP2_5":  0x50 << 5, 
-    "ENCODE_SQZ_QUALITY_BPP2_75": 0x58 << 5, 
-    "ENCODE_SQZ_QUALITY_MAX":     0xff << 5,
-];
-  
+        "ENCODE_SQZ_QUALITY_DEFAULT":         0, 
+        "ENCODE_SQZ_QUALITY_BPP1_0":  0x20 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP1_25": 0x28 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP1_5":  0x30 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP1_75": 0x38 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP2_0":  0x40 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP2_25": 0x48 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP2_5":  0x50 << 5, // if you want to beat guetzli this is alright
+        "ENCODE_SQZ_QUALITY_BPP2_75": 0x58 << 5, 
+        "ENCODE_SQZ_QUALITY_MAX":     0xff << 5,
+    ];
+    return flags;
+}
+      
