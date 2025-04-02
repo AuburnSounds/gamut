@@ -59,7 +59,7 @@ enum PixelType
 }
 
 /// Size of one pixel for given pixel type `type`, in bytes.
-int pixelTypeSize(PixelType type) pure
+int pixelTypeSize(PixelType type)
 {
     final switch(type) with (PixelType)
     {
@@ -344,7 +344,7 @@ enum LayoutConstraints
      LAYOUT_GAPLESS               = 2048; /// There must be no single trailing bytes between scanlines.
 
 
-PixelType convertPixelTypeToGreyscale(PixelType type) pure
+PixelType convertPixelTypeToGreyscale(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -372,7 +372,7 @@ PixelType convertPixelTypeToGreyscale(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeToRGB(PixelType type) pure
+PixelType convertPixelTypeToRGB(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -400,7 +400,7 @@ PixelType convertPixelTypeToRGB(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeToAddAlphaChannel(PixelType type) pure
+PixelType convertPixelTypeToAddAlphaChannel(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -428,7 +428,7 @@ PixelType convertPixelTypeToAddAlphaChannel(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeToDropAlphaChannel(PixelType type) pure
+PixelType convertPixelTypeToDropAlphaChannel(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -456,7 +456,7 @@ PixelType convertPixelTypeToDropAlphaChannel(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeToPremul(PixelType type) pure
+PixelType convertPixelTypeToPremul(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -484,7 +484,7 @@ PixelType convertPixelTypeToPremul(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeToNoPremul(PixelType type) pure
+PixelType convertPixelTypeToNoPremul(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -512,7 +512,7 @@ PixelType convertPixelTypeToNoPremul(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeTo8Bit(PixelType type) pure
+PixelType convertPixelTypeTo8Bit(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -540,7 +540,7 @@ PixelType convertPixelTypeTo8Bit(PixelType type) pure
     return t;
 }
 
-PixelType convertPixelTypeTo16Bit(PixelType type) pure
+PixelType convertPixelTypeTo16Bit(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)
@@ -569,7 +569,7 @@ PixelType convertPixelTypeTo16Bit(PixelType type) pure
 }
 
 
-PixelType convertPixelTypeToFP32(PixelType type) pure
+PixelType convertPixelTypeToFP32(PixelType type)
 {
     PixelType t = PixelType.unknown;
     final switch(type) with (PixelType)

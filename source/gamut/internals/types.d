@@ -41,7 +41,7 @@ bool pixelTypeIsCompressed(PixelType t) pure
 }
 
 /// Number of channels in this image type.
-int pixelTypeNumChannels(PixelType type) pure
+int pixelTypeNumChannels(PixelType type)
 {
     final switch(type) with (PixelType)
     {
@@ -69,7 +69,7 @@ int pixelTypeNumChannels(PixelType type) pure
 
 /// Number of bits for a single channel sample.
 /// For now, every channel has the same data type.
-int pixelTypeBitsPerChannel(PixelType type) pure
+int pixelTypeBitsPerChannel(PixelType type)
 {
     final switch(type) with (PixelType)
     {
@@ -334,22 +334,22 @@ void applyVFlipConstraintsToScanlinePointers(int width,
 /// then `deallocatePixelStorage` MUST be called later on.
 ///
 /// Params:
-///     existingData The existing `mallocArea` from a former call to `allocatePixelStorage`.
-///     type         Pixel data type.
-///     layers       How many such of image are allocated. Must be 1 or greater.
-///     width        Image width.
-///     height       Image height.
-///     constraints  The layout constraints to follow for the scanlines and allocation. MUST be valid.
-///     bonusBytes   If non-zero, the area mallocArea[0..bonusBytes] can be used for user storage.
-///                  Only the caller can use as temp storage, since Image won't preserve knowledge of these
-///                  bonusBytes once the allocation is done.
-///     clearWithZeroes Should fill the whole allocated area with zeroes (so that includes borders and gap bytes).
-///     dataPointer  The pointer to the first scanline.
-///     mallocArea   The pointer to the allocation beginning. Will be different from dataPointer and
-///                  must be kept somewhere.
-///     pitchBytes   Byte offset between two adjacent scanlines. Scanlines cannot ever overlap.
-///     layerOffset  Byte offset between two adjacent layers. Return 0 if only one layer.
-///     err          True if successful. Only err indicates success, not mallocArea.
+///     existingData = The existing `mallocArea` from a former call to `allocatePixelStorage`.
+///     type         = Pixel data type.
+///     layers       = How many such of image are allocated. Must be 1 or greater.
+///     width        = Image width.
+///     height       = Image height.
+///     constraints  = The layout constraints to follow for the scanlines and allocation. MUST be valid.
+///     bonusBytes   = If non-zero, the area mallocArea[0..bonusBytes] can be used for user storage.
+///                    Only the caller can use as temp storage, since Image won't preserve knowledge of these
+///                    bonusBytes once the allocation is done.
+///     clearWithZeroes = Should fill the whole allocated area with zeroes (so that includes borders and gap bytes).
+///     dataPointer  = The pointer to the first scanline.
+///     mallocArea   = The pointer to the allocation beginning. Will be different from dataPointer and
+///                    must be kept somewhere.
+///     pitchBytes   = Byte offset between two adjacent scanlines. Scanlines cannot ever overlap.
+///     layerOffset  = Byte offset between two adjacent layers. Return 0 if only one layer.
+///     err          = True if successful. Only err indicates success, not mallocArea.
 ///
 /// Note: even if you can request zero bytes, `realloc` can give you a non-null pointer, 
 /// that you would have to keep. This is a success case given by `err` only.
@@ -365,7 +365,7 @@ void allocatePixelStorage(ubyte* existingData,
                           out ubyte* mallocArea,  // the result of realloc-ed
                           out int pitchBytes,
                           out int layerOffset,
-                          out bool err) pure @trusted
+                          out bool err) @trusted
 {
     assert(layers >= 0); // layers == 0 must be supported!
     assert(width >= 0); // width == 0 and height == 0 must be supported!

@@ -123,21 +123,21 @@ public:
 
     /// Get the number of channels in this image.
     /// Tags: #valid
-    int channels() pure const
+    int channels() const
     {
         return pixelTypeNumChannels(_type);
     }
 
     /// Returns: Bits used by one pixel (BPP).
     /// Tags: #valid
-    int bitsPerPixel() pure const
+    int bitsPerPixel() const
     {
         return pixelTypeBitsPerChannel(_type) * channels();
     }
 
     /// Returns: Bits used by one channel.
     /// Tags: #valid
-    int bitsPerChannel() pure const
+    int bitsPerChannel() const
     {
         return pixelTypeBitsPerChannel(_type);
     }
@@ -190,7 +190,7 @@ public:
     ///
     /// See_also: `pitchInBytes`.
     /// Tags: #valid #data
-    int scanlineInBytes() pure const
+    int scanlineInBytes() const
     {
         assert(hasData());
         return _width * pixelTypeSize(type);
@@ -259,12 +259,12 @@ public:
     ///
     /// Returns: The whole `y`th row of pixels.
     /// Tags: #valid #data #plain
-    inout(void)[] scanline(int y) inout pure @trusted
+    inout(void)[] scanline(int y) inout @trusted
     {
         return scanptr(y)[0..scanlineInBytes()];
     }
     ///ditto
-    inout(void)[] layerline(int layer, int y) inout pure @trusted
+    inout(void)[] layerline(int layer, int y) inout @trusted
     {
         return layerptr(layer, y)[0..scanlineInBytes()];
     }
@@ -275,7 +275,7 @@ public:
     /// To avoid accidental correctness, the image NEEDS to have the layout constraints:
     /// `LAYOUT_GAPLESS | LAYOUT_VERT_STRAIGHT`.
     /// Tags: #valid #data #plain
-    inout(ubyte)[] allPixelsAtOnce() inout pure @trusted
+    inout(ubyte)[] allPixelsAtOnce() inout @trusted
     {
         assert(isPlainPixels());
 
@@ -424,7 +424,7 @@ public:
 
     /// Is the image type represented by 8-bit components?
     /// Tags: #valid.
-    bool is8Bit() pure const
+    bool is8Bit() const
     {
         assert(isValid);
         return convertPixelTypeTo8Bit(_type) == _type;
@@ -432,7 +432,7 @@ public:
 
     /// Is the image type represented by 16-bit components?
     /// Tags: #valid.
-    bool is16Bit() pure const
+    bool is16Bit() const
     {
         assert(isValid);
         return convertPixelTypeTo16Bit(_type) == _type;
@@ -440,7 +440,7 @@ public:
 
     /// Is the image type represented by 32-bit floating point components?
     /// Tags: #valid.
-    bool isFP32() pure const
+    bool isFP32() const
     {
         assert(isValid);
         return convertPixelTypeToFP32(_type) == _type;
@@ -473,7 +473,7 @@ public:
     }
 
     /// Disown the image allocation data.
-    /// This return both the pixel _data (same as and the allocation data
+    ///
     /// The data MUST be freed with `freeImageData`.
     /// The image still points into that data, and you must ensure the data lifetime exceeeds
     /// the image lifetime.
@@ -850,8 +850,8 @@ public:
     /// Load an image from a file location.
     ///
     /// Params:
-    ///    path  A string containing the file path.
-    ///    flags Flags can contain LOAD_xxx flags and LAYOUT_xxx flags.
+    ///    path  = A string containing the file path.
+    ///    flags = Flags can contain LOAD_xxx flags and LAYOUT_xxx flags.
     ///
     /// Returns: `true` if successfull. The image will be in errored state if there is a problem.
     /// See_also: `LoadFlags`, `LayoutConstraints`.
@@ -908,10 +908,9 @@ public:
     /// Load an image from a set of user-defined I/O callbacks.
     ///
     /// Params:
-    ///    fif The target image format.
-    ///    io The user-defined callbacks.
-    ///    handle A void* user pointer to pass to I/O callbacks.
-    ///    flags Flags can contain LOAD_xxx flags and LAYOUT_xxx flags.
+    ///    io     = The user-defined callbacks.
+    ///    handle = A void* user pointer to pass to I/O callbacks.
+    ///    flags  = Flags can contain LOAD_xxx flags and LAYOUT_xxx flags.
     ///
     /// Tags: none.
     bool loadFromStream(ref IOStream io, IOHandle handle, int flags = 0) @system
@@ -928,7 +927,8 @@ public:
     /// Saves an image to a file, detecting the format from the path extension.
     ///
     /// Params:
-    ///     path The path of output file.
+    ///     path  = The path of output file.
+    ///     flags = Encoding flags.
     ///      
     /// Returns: `true` if file successfully written.
     /// Tags: none.
@@ -944,8 +944,9 @@ public:
     /// Save the image into a file, with a given file format.
     ///
     /// Params:
-    ///     fif The `ImageFormat` to use.
-    ///     path The path of output file.
+    ///     fif   = The `ImageFormat` to use.
+    ///     path  = The path of output file.
+    ///     flags = Encoding flags.
     ///
     /// Returns: `true` if file successfully written.
     /// Tags: none.
@@ -981,9 +982,10 @@ public:
     /// Save an image with a set of user-defined I/O callbacks.
     ///
     /// Params:
-    ///     fif The `ImageFormat` to use.
-    ///     io User-defined stream object.
-    ///     handle User provided `void*` pointer  passed to the I/O callbacks.
+    ///     fif    = The `ImageFormat` to use.
+    ///     io     = User-defined stream object.
+    ///     handle = User provided `void*` pointer  passed to the I/O callbacks.
+    ///     flags  = Encoding flags.
     ///
     /// Returns: `true` if file successfully written.
     /// Tags: none.
@@ -1470,7 +1472,7 @@ public:
     /// Flip the image data horizontally.
     /// If the image has no data, the operation is successful.
     /// Tags: #valid.
-    bool flipHorizontal() pure @trusted
+    bool flipHorizontal() @trusted
     {
         assert(isValid());
 
@@ -1519,7 +1521,7 @@ public:
     ///
     /// Returns: `true` on success, sets an error else and return `false`.
     /// Tags: #valid.
-    bool flipVertical() pure
+    bool flipVertical()
     {
         assert(isValid());
 
@@ -1921,7 +1923,7 @@ private:
         return true;
     }
 
-    bool flipVerticalPhysical() pure @trusted
+    bool flipVerticalPhysical() @trusted
     {
         if (!hasData())
             return true; // Nothing to do

@@ -1261,10 +1261,9 @@ version(decodePNG)
 {
     import miniz;
 
-    /// Params:
-    ///  buffer Input buffer
-    ///  len Length of input buffer
-    ///  initial_size Size hint for output buffer (which is realloc on growth)
+    //  buffer = Input buffer
+    //  len = Length of input buffer
+    //  initial_size = Size hint for output buffer (which is realloc on growth)
     public ubyte *stbi_zlib_decode_malloc_guesssize_headerflag(
         const(char)*buffer, 
         int len, 

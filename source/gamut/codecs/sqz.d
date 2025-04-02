@@ -505,8 +505,8 @@ uint SQZ_ilog2(uint x)
  * Mirrors a value to the interval [0..maximum], used for symmetric extension at the image boundaries
  * 
  * Params:
- *    value: The signed value we wish to mirror
- *    maximum: Largest positive value inside the interval
+ *    value   = The signed value we wish to mirror
+ *    maximum = Largest positive value inside the interval
  * Returns:
  *    n unsigned integer inside the requested interval, mirrored around its boundaries
  */

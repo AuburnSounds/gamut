@@ -57,15 +57,16 @@ bool scanlinesCopy(PixelType type, const(ubyte)* src, int srcPitch,
 /// Convert several scanlines, using `interBuf` an intermediate buffer.
 /// 
 /// Params:
-///     srcType   Type of input pixels.
-///     src       Input data, point to width x height scanlines.
-///     srcPitch  Bytes between lines, can be negative.
-///     destType  Type of output pixels.
-///     dest      Output data, point to width x height scanlines.
-///     width     Width of area to convert, in pixels.
-///     height    Height of area to convert, in pixels.
-///     interType Type given by scanlinesInterType(srcType, destType).
-///     interBuf  Buffer of pixelTypeSize(interType) * width.
+///     srcType   = Type of input pixels.
+///     src       = Input data, point to width x height scanlines.
+///     srcPitch  = Bytes between input lines, can be negative.
+///     destType  = Type of output pixels.
+///     dest      = Output data, point to width x height scanlines.
+///     destPitch = Bytes between output lines, can be negative.
+///     width     = Width of area to convert, in pixels.
+///     height    = Height of area to convert, in pixels.
+///     interType = Type given by scanlinesInterType(srcType, destType).
+///     interBuf  = Buffer of pixelTypeSize(interType) * width.
 bool scanlinesConvert(PixelType srcType, const(ubyte)* src, int srcPitch, 
                       PixelType destType, ubyte* dest, int destPitch,
                       int width, int height,
