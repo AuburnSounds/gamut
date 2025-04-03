@@ -5,7 +5,7 @@ module gamut.codecs.bc7enc16;
 version(encodeDDS):
 
 import core.stdc.string: memset, memcpy;
-import std.math: abs, sqrt, floor;
+import core.stdc.math: fabsf, sqrtf, floorf;
 
 // File: bc7enc16.h - Richard Geldreich, Jr. - MIT license or public domain (see end of bc7enc16.c)
 
@@ -244,12 +244,12 @@ vec4F vec4F_mul(const(vec4F)* pLHS, float s) pure @trusted
     return res; 
 }
 
-vec4F* vec4F_normalize_in_place(vec4F *pV) pure
+vec4F* vec4F_normalize_in_place(vec4F *pV)
 { 
     float s = pV.m_c[0] * pV.m_c[0] + pV.m_c[1] * pV.m_c[1] + pV.m_c[2] * pV.m_c[2] + pV.m_c[3] * pV.m_c[3]; 
     if (s != 0.0f) 
     { 
-        s = 1.0f / sqrt(s); 
+        s = 1.0f / sqrtf(s); 
         pV.m_c[0] *= s; 
         pV.m_c[1] *= s; 
         pV.m_c[2] *= s; 
@@ -859,7 +859,7 @@ void fixDegenerateEndpoints(uint mode,
         {
             if (pTrialMinColor.m_c[i] == pTrialMaxColor.m_c[i])
             {
-                if (abs(pXl.m_c[i] - pXh.m_c[i]) > 0.0f)
+                if (fabsf(pXl.m_c[i] - pXh.m_c[i]) > 0.0f)
                 {
                     if (pTrialMinColor.m_c[i] > (iscale >> 1))
                     {
@@ -1099,7 +1099,7 @@ ulong color_cell_compression(uint mode,
             float g = vfr*cov[1] + vfg*cov[3] + vfb*cov[4];
             float b = vfr*cov[2] + vfg*cov[4] + vfb*cov[5];
 
-            float m = maximumf(maximumf(abs(r), abs(g)), abs(b));
+            float m = maximumf(maximumf(fabsf(r), fabsf(g)), fabsf(b));
             if (m > 1e-10f)
             {
                 m = 1.0f / m;
@@ -1114,7 +1114,7 @@ ulong color_cell_compression(uint mode,
             vec4F_set_scalar(&axis, 0.0f);
         else
         {
-            len = 1.0f / sqrt(len);
+            len = 1.0f / sqrtf(len);
             vfr *= len; vfg *= len; vfb *= len;
             vec4F_set(&axis, vfr, vfg, vfb, 0);
         }
@@ -1281,7 +1281,7 @@ ulong color_cell_compression(uint mode,
                         continue;
 
                     for (uint i = 0; i < pParams.m_num_pixels; i++)
-                        selectors_temp1[i] = cast(ubyte)clampf(floor(cast(float)max_selector * (cast(float)selectors_temp[i] - cast(float)ly) / (cast(float)hy - cast(float)ly) + .5f), 0, cast(float)max_selector);
+                        selectors_temp1[i] = cast(ubyte)clampf(floorf(cast(float)max_selector * (cast(float)selectors_temp[i] - cast(float)ly) / (cast(float)hy - cast(float)ly) + .5f), 0, cast(float)max_selector);
 
                     //vec4F xl, xh;
                     vec4F_set_scalar(&xl, 0.0f);

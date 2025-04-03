@@ -314,7 +314,6 @@ unittest
     assert(read_int_BE(pRead) == 0x00010203);
     assert(read_short_BE(pRead) == 0x0405);
 
-    import std.array;
     ubyte[4 + 8 + 2] arr2;
     ubyte* pWrite = arr2.ptr;
     write_float_BE(pWrite, 1.0f);

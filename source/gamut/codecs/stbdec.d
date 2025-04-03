@@ -113,7 +113,7 @@ import core.stdc.config: c_ulong;
 import core.stdc.string: memcpy, memset;
 import core.stdc.stdlib: malloc, free, realloc;
 import core.atomic;
-import std.math: ldexp, pow, abs;
+import core.stdc.math: powf;
 import gamut.io;
 
 nothrow @nogc:
@@ -1220,7 +1220,7 @@ version(enableLinear)
         {
             for (k = 0; k < n; ++k) 
             {
-                output[i*comp + k] = cast(float) (pow(data[i*comp+k] / 255.0f, stbi__l2h_gamma) * stbi__l2h_scale);
+                output[i*comp + k] = cast(float) (powf(data[i*comp+k] / 255.0f, stbi__l2h_gamma) * stbi__l2h_scale);
             }
         }
         if (n < comp) 
@@ -1390,9 +1390,9 @@ version(decodePNG)
     int stbi__paeth(int a, int b, int c)
     {
         int p = a + b - c;
-        int pa = abs(p-a);
-        int pb = abs(p-b);
-        int pc = abs(p-c);
+        int pa = abs_int(p-a);
+        int pb = abs_int(p-b);
+        int pc = abs_int(p-c);
         if (pa <= pb && pa <= pc) 
             return a;
         if (pb <= pc) 
@@ -2259,7 +2259,7 @@ version(decodeBMP)
             return null; // error code already set
 
         flip_vertically = (cast(int) s.img_y) > 0;
-        s.img_y = abs(cast(int) s.img_y);
+        s.img_y = abs_int(cast(int) s.img_y);
 
         if (s.img_y > STBI_MAX_DIMENSIONS) return null;
         if (s.img_x > STBI_MAX_DIMENSIONS) return null;
@@ -2495,4 +2495,9 @@ version(decodeBMP)
         assert(bits >= 0 && bits <= 8);
         return cast(int) (cast(uint) v * mul_table[bits]) >> shift_table[bits];
     }
+}
+
+int abs_int(int x)
+{
+    return x >= 0 ? x : cast(int) -x;
 }
