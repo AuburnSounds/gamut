@@ -2499,5 +2499,5 @@ version(decodeBMP)
 
 int abs_int(int x)
 {
-    return x >= 0 ? x : cast(int) -x;
+    return x >= 0 ? x : -cast(int)x;
 }

@@ -105,7 +105,6 @@ version(encodeJPEG)
 
 version(compileSTBImageWrite):
 
-import std.math: abs;
 import core.stdc.stdlib: malloc, realloc, free;
 import core.stdc.string: memcpy, memmove;
 import miniz;
@@ -252,9 +251,14 @@ static void stbiw__wpcrc(ubyte **data, int len)
    stbiw__wp32(*data, crc);
 }
 
+int abs_int(int x)
+{
+    return x >= 0 ? x : -cast(int)x;
+}
+
 ubyte stbiw__paeth(int a, int b, int c)
 {
-   int p = a + b - c, pa = abs(p-a), pb = abs(p-b), pc = abs(p-c);
+   int p = a + b - c, pa = abs_int(p-a), pb = abs_int(p-b), pc = abs_int(p-c);
    if (pa <= pb && pa <= pc) return STBIW_UCHAR(a);
    if (pb <= pc) return STBIW_UCHAR(b);
    return STBIW_UCHAR(c);
@@ -388,7 +392,7 @@ public ubyte *stbi_write_png_to_mem(const(ubyte*) pixels, int stride_bytes, int 
             // Estimate the entropy of the line using this filter; the less, the better.
             est = 0;
             for (i = 0; i < x*n; ++i) { // Note: adapting that entropy for 16-bit samples wins nothing.
-               est += abs(line_buffer[i]);
+               est += abs_int(line_buffer[i]);
             }
             if (est < best_filter_val) {
                best_filter_val = est;
