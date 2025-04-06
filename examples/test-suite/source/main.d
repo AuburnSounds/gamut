@@ -1,8 +1,10 @@
 module main;
 
 import core.stdc.stdlib;
-import std.stdio;
-import std.file;
+import core.stdc.stdio;
+import core.stdc.string;
+//import std.stdio;
+//import std.file;
 import gamut;
 import gamut.codecs.stbdec;
 
@@ -52,7 +54,7 @@ void testDecodingVSTLogo()
     assert(!image.isError);
 
     // Test decoding of first problem chunk in the image
-    char[] bytes = cast(char[]) std.file.read("test-images/buggy-miniz-chunk.bin");
+    char[] bytes = cast(char[]) readFile("test-images/buggy-miniz-chunk.bin".ptr);
     assert(bytes.length == 25568);
 
     // initial_size is 594825, but more is returned by inflate, 594825 + 272 with both miniz and stbz
@@ -104,7 +106,9 @@ void testIssue63()
     const int h = 16;
     enum scale = 16;
     const int frames = 1;
-    ubyte[4][] img = new ubyte[4][w * h];
+    size_t frameBytes = 4 * w * h;
+    size_t numPixels = w*h;
+    ubyte[4]* img = cast(ubyte[4]*) malloc(frameBytes);
     foreach (ubyte x; 0 .. w)
     {
         foreach (ubyte y; 0 .. h)
@@ -115,15 +119,15 @@ void testIssue63()
                               255];
         }
     }
-    ubyte[4][] gif;
+    ubyte[4]* gif = cast(ubyte[4]*) malloc(frameBytes * frames);
     foreach (i; 0 .. frames)
-        gif ~= img.dup;
+        gif[numPixels*i .. numPixels*(i+1)] = img[0..numPixels];
 
     Image image;
     int pitchInBytes     = w * 4;
     int layerOffsetBytes = w * h * 4;
 
-    image.createLayeredView(cast(void*) gif.ptr, w, h, frames, PixelType.rgba8,
+    image.createLayeredView(cast(void*) gif, w, h, frames, PixelType.rgba8,
                             pitchInBytes, layerOffsetBytes);
     image.saveToFile("output/issue63.gif");
 }
@@ -133,24 +137,24 @@ void testIssue65()
 {
     Image img;
     if (!img.loadFromFile("test-images/issue65.png", LOAD_FP32 | LOAD_GREYSCALE))
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
     assert(img.hasData);
     assert(img.isValid);
     if (!img.isValid)
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
     assert(img.hasData);
     assert(img.isValid);
     if (!img.setLayout(LAYOUT_TRAILING_1))
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
 
     if (!img.setLayout(LAYOUT_TRAILING_0)) // <-- assert fails here
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
     assert(img.hasData);
     if (!img.convertTo8Bit()) // <-- or here if the above setLayout isn't there
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
     assert(img.hasData);
     if (!img.saveToFile("output/decoded.png")) // <-- this wouldn't assert fail, but it just emits an empty file with error set
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
 }
 
 void testIssue67()
@@ -158,7 +162,7 @@ void testIssue67()
     import core.math: fabs;
     Image img;
     if (!img.loadFromFile("test-images/issue67.bmp"))
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
     assert(fabs(img.dotsPerInchX() - 200) < 0.1);
     assert(fabs(img.dotsPerInchY() - 100) < 0.1);
     assert(fabs(img.pixelAspectRatio() - 2) < 0.01);
@@ -168,7 +172,7 @@ void testIssue76()
 {
     Image img;
     if (!img.loadFromFile("test-images/issue76.png"))
-        throw new Exception(img.errorMessage().idup);
+        throw new Exception(img.errorMessage().mallocIDup);
     // Should load as greyscale L16
     assert(img.isValid);
     assert(img.type == PixelType.l16);
@@ -317,4 +321,90 @@ private:
     {
         LARGE_INTEGER _qpcFrequency;
     }
+}
+
+
+ubyte[] readFile(const(char)[] fileNameZ)
+{
+    // assuming that fileNameZ is zero-terminated, since it will in practice be
+    // a static string
+    FILE* file = fopen(assumeZeroTerminated(fileNameZ), "rb".ptr);
+    if (file)
+    {
+        scope(exit) fclose(file);
+
+        // finds the size of the file
+        fseek(file, 0, SEEK_END);
+        long size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+
+        // Is this too large to read? 
+        // Refuse to read more than 1gb file (if it happens, it's probably a bug).
+        if (size > 1024*1024*1024)
+            return null;
+
+        // Read whole file in a mallocated slice
+        ubyte[] fileBytes = mallocSliceNoInit!ubyte(cast(int)size + 1); // room for one additional '\0' byte
+        size_t remaining = cast(size_t)size;
+
+        ubyte* p = fileBytes.ptr;
+
+        while (remaining > 0)
+        {
+            size_t bytesRead = fread(p, 1, remaining, file);
+            if (bytesRead == 0)
+            {
+                freeSlice(fileBytes);
+                return null;
+            }
+            p += bytesRead;
+            remaining -= bytesRead;
+        }
+
+        fileBytes[cast(size_t)size] = 0;
+
+        return fileBytes[0..cast(size_t)size];
+    }
+    else
+        return null;
+}
+ubyte[] readFile(const(char)* fileNameZ)
+{
+    import core.stdc.string: strlen;
+    return readFile(fileNameZ[0..strlen(fileNameZ)]);
+}
+T[] mallocDup(T)(const(T)[] slice) nothrow @nogc if (!is(T == struct))
+{
+    T[] copy = mallocSliceNoInit!T(slice.length);
+    memcpy(copy.ptr, slice.ptr, slice.length * T.sizeof);
+    return copy;
+}
+
+immutable(T)[] mallocIDup(T)(const(T)[] slice) nothrow @nogc if (!is(T == struct))
+{
+    return cast(immutable(T)[]) mallocDup!T(slice);
+}
+
+
+/// Allocates a slice with `malloc`, but does not initialize the content.
+T[] mallocSliceNoInit(T)(size_t count) nothrow @nogc
+{
+    T* p = cast(T*) malloc(count * T.sizeof);
+    return p[0..count];
+}
+
+const(char)* assumeZeroTerminated(const(char)[] input) nothrow @nogc
+{
+    if (input.ptr is null)
+        return null;
+
+    // Check that the null character is there
+    assert(input.ptr[input.length] == '\0');
+    return input.ptr;
+}
+
+/// Frees a slice allocated with `mallocSlice`.
+void freeSlice(T)(const(T)[] slice) nothrow @nogc
+{
+    free(cast(void*)(slice.ptr)); // const cast here
 }
