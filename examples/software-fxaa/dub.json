@@ -1,0 +1,16 @@
+{
+    "name": "software-fxaa",
+    "description": "Decode an image, apply FXAA, save the image.",
+    "license": "BSL-1.0",
+
+    "dependencies": {
+        "gamut": { "path": "../.." },
+        "intel-intrinsics": "~>1.0",
+        "colors": "~>0.0"
+    },
+
+    "subConfigurations":
+    {
+        "gamut": "boost+mit"
+    }
+}
