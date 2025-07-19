@@ -375,9 +375,9 @@ Here is how to process pixels of an `rgba8` image in-place.
               float g = scan[4*x + 1] / 255.0f;
               float b = scan[4*x + 2] / 255.0f;
               float a = scan[4*x + 3] / 255.0f;
-              r = (gain * (r + lift * (1-r)))^(1/gamma);
-              g = (gain * (g + lift * (1-r)))^(1/gamma);
-              b = (gain * (b + lift * (1-r)))^(1/gamma);
+              r = (gain * (r + lift * (1-r)))^^(1/gamma);
+              g = (gain * (g + lift * (1-r)))^^(1/gamma);
+              b = (gain * (b + lift * (1-r)))^^(1/gamma);
               if (r < 0) r = 0;
               if (g < 0) g = 0;
               if (b < 0) b = 0;
