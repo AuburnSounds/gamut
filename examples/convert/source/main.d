@@ -1,8 +1,10 @@
 module main;
 
 import std.stdio;
+import std.file;
+import std.format;
 import gamut;
-
+import consolecolors;
 
 void usage()
 {
@@ -146,13 +148,7 @@ int main(string[] args)
         if (premul) image.premultiply();
         if (unpremul) image.unpremultiply();
 
-        writefln("Opened %s", input);
-        writefln(" - width      = %s", image.width);
-        writefln(" - height     = %s", image.height);
-        writefln(" - layers     = %s", image.layers);
-        writefln(" - type       = %s", image.type);
-
-        // TODO: SQZ encoder doesn't support any layout yet
+        // TODO: SQZ encoder doesn't support any other layout yet
         image.setLayout(LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
 
         bool r = result.saveToFile(output, encodeFlags);
@@ -161,7 +157,21 @@ int main(string[] args)
             throw new Exception("Couldn't save file " ~ output);
         }
 
-        writefln(" => Written to %s", output);
+        string fileSize(const(char)[] path)
+        {
+            long bytes = getSize(path);
+            if (bytes < 1024)
+                return format("%4s  B", bytes);
+            else if (bytes < 1024 * 1024)
+                return format("%4s kB", bytes / 1024);
+            else
+                return format("%4s MB", bytes / (1024*1024));
+        }
+
+        cwritef("<lcyan>%20s (<yellow>%s</yellow>)</lcyan>", input, fileSize(input));
+        cwritef(" encoded to ");
+        cwritef("<lgreen>%20s (<yellow>%s</yellow>, %s)</lgreen>\n", output, fileSize(output), image.type);
+
         return 0;
     }
     catch(Exception e)
