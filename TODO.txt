@@ -1,3 +1,5 @@
-- GAMUT: allocator design
+- Fix the LAYOUT being erased by most operation, introduce
+  a new default named LAYOUT_KEEP, that preserve layout.
+- need to allow nurt, also in colors, stb_image_resize2
 - GAMUT: metadata
-- GAMUT: resizing
+- perhap host miniz there one day, and expose its interface
