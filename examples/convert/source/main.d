@@ -120,9 +120,6 @@ int main(string[] args)
 
         image.loadFromFile(input, LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
 
-      
-
-
         if (image.isError)
         {
             throw new Exception("Couldn't open file " ~ input);
@@ -147,9 +144,6 @@ int main(string[] args)
         if (premul && unpremul) throw new Exception("Cannot have both --premul and --unpremul");
         if (premul) image.premultiply();
         if (unpremul) image.unpremultiply();
-
-        // TODO: SQZ encoder doesn't support any other layout yet
-        image.setLayout(LAYOUT_VERT_FLIPPED | LAYOUT_BORDER_2);
 
         bool r = result.saveToFile(output, encodeFlags);
         if (!r)
