@@ -77,7 +77,7 @@ void loadSQZ(ref Image image, IOStream *io, IOHandle handle, int page, int flags
     // Find out size needed
     size_t dest_size;
     SQZ_image_descriptor_t desc;
-    SQZ_status_t st = SQZ_decode(buf, null, len, &dest_size, &desc);
+    SQZ_status_t st = SQZ_decode(buf, null, 0, len, &dest_size, &desc);
     if (st != SQZ_BUFFER_TOO_SMALL)
     {
         image.error(kStrImageDecodingIOFailure);
@@ -108,7 +108,8 @@ void loadSQZ(ref Image image, IOStream *io, IOHandle handle, int page, int flags
     }
 
     ubyte* decoded = cast(ubyte*) malloc(dest_size);
-    st = SQZ_decode(buf, decoded, len, &dest_size, &desc);
+    int pitchBytes = w * cast(int)desc.num_planes;
+    st = SQZ_decode(buf, decoded, pitchBytes, len, &dest_size, &desc);
     if (st != SQZ_RESULT_OK)
     {
         free(decoded);
@@ -177,13 +178,13 @@ bool saveSQZ(ref const(Image) image, IOStream *io, IOHandle handle, int page, in
     // are faster, but look less good in our tests.
     desc.color_mode = SQZ_COLOR_MODE_OKLAB;
 
-    desc.dwt_levels = 7; // 7 is better for size, without adverse speed consequence
+    desc.dwt_levels = 7;  // 7 is better for size, without adverse speed consequence
     desc.subsampling = 1; // very much worth it
     desc.scan_order = SQZ_SCAN_ORDER_SNAKE; // wins a bit according to encode.su
 
-    // TODO: SQZ encoder should take a pitch
-    ubyte* content = cast(ubyte*) image.allPixelsAtOnce.ptr;
-    SQZ_status_t st = SQZ_encode(content, encoded, &desc, &budget);
+    void* firstScan = cast(void*) image.scanptr(0); // #const_cast here
+    int pitchBytes = image.pitchInBytes;
+    SQZ_status_t st = SQZ_encode(firstScan, pitchBytes, encoded, &desc, &budget);
 
     if (st != SQZ_RESULT_OK)
         return false;

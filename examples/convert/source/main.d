@@ -149,7 +149,7 @@ int main(string[] args)
         if (unpremul) image.unpremultiply();
 
         // TODO: SQZ encoder doesn't support any other layout yet
-        image.setLayout(LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
+        image.setLayout(LAYOUT_VERT_FLIPPED | LAYOUT_BORDER_2);
 
         bool r = result.saveToFile(output, encodeFlags);
         if (!r)

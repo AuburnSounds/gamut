@@ -1150,24 +1150,35 @@ ubyte SQZ_COLOR_CLIP(SQZ_dwt_coefficient_t v)
     return cast(ubyte)v;
 }
 
-void SQZ_color_process_grayscale(SQZ_context_t* ctx, void* buffer, int read) 
+void SQZ_color_process_grayscale(SQZ_context_t* ctx, void* bufscan, int pitchBytes, int read) 
 {
     SQZ_dwt_coefficient_t* data = ctx.data;
-    ubyte* ptr = cast(ubyte*)buffer;
+    int W = cast(int) ctx.image.width;
+    int H = cast(int) ctx.image.height;
     size_t length = ctx.image.width * ctx.image.height;
     if (read) 
     {
-        for (size_t i = 0; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            data[i] = (cast(SQZ_dwt_coefficient_t)ptr[i]) - SQZ_COLOR_8BPC_LEVEL_OFFSET;
+            ubyte* pInput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                int i = x + y * W;
+                data[i] = (cast(SQZ_dwt_coefficient_t)pInput[x]) - SQZ_COLOR_8BPC_LEVEL_OFFSET;
+            }
         }
     }
     else 
     {
-        for (size_t i = 0; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            SQZ_dwt_coefficient_t v = cast(short)(data[i] + SQZ_COLOR_8BPC_LEVEL_OFFSET);
-            ptr[i] = SQZ_COLOR_CLIP(v);
+            ubyte* pOutput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                int i = x + y * W;
+                SQZ_dwt_coefficient_t v = cast(short)(data[i] + SQZ_COLOR_8BPC_LEVEL_OFFSET);
+                pOutput[x] = SQZ_COLOR_CLIP(v);
+            }
         }
     }
 }
@@ -1176,36 +1187,48 @@ void SQZ_color_process_grayscale(SQZ_context_t* ctx, void* buffer, int read)
 Based on "YCoCg-R: A Color Space with RGB Reversibility and Low Dynamic Range" - by Henrique Malvar
 and Gary Sullivan - [https://wftp3.itu.int/av-arch/jvt-site/2003_09_SanDiego/JVT-I014r3.doc]
 */
-void SQZ_color_process_ycocg_r(SQZ_context_t* ctx, void* buffer, int read) 
+void SQZ_color_process_ycocg_r(SQZ_context_t* ctx, void* bufscan, int pitchBytes, int read) 
 {
     SQZ_dwt_coefficient_t* Y  = ctx.plane[0].data, 
                            Co = ctx.plane[1].data, 
                            Cg = ctx.plane[2].data;
-    ubyte* ptr = cast(ubyte*)buffer;
+    int W = cast(int) ctx.image.width;
+    int H = cast(int) ctx.image.height;
     size_t length = ctx.image.width * ctx.image.height;
     if (read) 
     {
-        for (size_t i = 0u; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            SQZ_dwt_coefficient_t R = *ptr++, G = *ptr++, B = *ptr++, t = (R + B) >> 1;
-            *Y++ = cast(short) ( ((t + G) >> 1) - SQZ_COLOR_8BPC_LEVEL_OFFSET );
-            *Co++ = cast(short) (R - B);
-            *Cg++ = cast(short) (G - t);
+            ubyte* pInput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                SQZ_dwt_coefficient_t R = pInput[x*3+0],
+                                      G = pInput[x*3+1],
+                                      B = pInput[x*3+2];
+                SQZ_dwt_coefficient_t t = (R + B) >> 1;
+                *Y++ = cast(short) ( ((t + G) >> 1) - SQZ_COLOR_8BPC_LEVEL_OFFSET );
+                *Co++ = cast(short) (R - B);
+                *Cg++ = cast(short) (G - t);
+            }
         }
     }
     else 
     {
-        for (size_t i = 0u; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            SQZ_dwt_coefficient_t Y_  = cast(short) ( (*Y++) + SQZ_COLOR_8BPC_LEVEL_OFFSET ), 
-                                  Co_ = (*Co++), 
-                                  Cg_ = (*Cg++);
-            SQZ_dwt_coefficient_t B = cast(short) ( Y_ + ((1 - Cg_) >> 1) - (Co_ >> 1) );
-            SQZ_dwt_coefficient_t G = cast(short) ( Y_ - ((-cast(int)Cg_) >> 1) );
-            SQZ_dwt_coefficient_t R = cast(short) ( Co_ + B );
-            *ptr++ = SQZ_COLOR_CLIP(R);
-            *ptr++ = SQZ_COLOR_CLIP(G);
-            *ptr++ = SQZ_COLOR_CLIP(B);
+            ubyte* pOutput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                SQZ_dwt_coefficient_t Y_  = cast(short) ( (*Y++) + SQZ_COLOR_8BPC_LEVEL_OFFSET ), 
+                    Co_ = (*Co++), 
+                    Cg_ = (*Cg++);
+                SQZ_dwt_coefficient_t B = cast(short) ( Y_ + ((1 - Cg_) >> 1) - (Co_ >> 1) );
+                SQZ_dwt_coefficient_t G = cast(short) ( Y_ - ((-cast(int)Cg_) >> 1) );
+                SQZ_dwt_coefficient_t R = cast(short) ( Co_ + B );
+                pOutput[x*3+0] = SQZ_COLOR_CLIP(R);
+                pOutput[x*3+1] = SQZ_COLOR_CLIP(G);
+                pOutput[x*3+2] = SQZ_COLOR_CLIP(B);
+            }
         }
     }
 }
@@ -1367,34 +1390,39 @@ enum SQZ_COLOR_OKLAB_MUL = (1 << (SQZ_COLOR_LINEAR_PRECISION - SQZ_COLOR_OKLAB_P
 static assert(SQZ_COLOR_OKLAB_MUL == 16);
 enum SQZ_COLOR_OKLAB_LEVEL_OFFSET = (1 << (SQZ_COLOR_OKLAB_PRECISION - 1));
 
-void SQZ_color_process_oklab(SQZ_context_t* ctx, void* buffer, int read) 
+void SQZ_color_process_oklab(SQZ_context_t* ctx, void* bufscan, int pitchBytes, int read) 
 {
+    int W = cast(int) ctx.image.width;
+    int H = cast(int) ctx.image.height;
     SQZ_dwt_coefficient_t* L = ctx.plane[0].data, 
                            a = ctx.plane[1].data, 
                            b = ctx.plane[2].data;
-    ubyte* ptr = cast(ubyte*)buffer;
     size_t length = ctx.image.width * ctx.image.height;
     if (read) 
     {
-        for (size_t i = 0u; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            int R = SQZ_sRGB_to_linear[*ptr++];
-            int G = SQZ_sRGB_to_linear[*ptr++];
-            int B = SQZ_sRGB_to_linear[*ptr++];
-            int l = SQZ_i32_cbrt_01(cast(int)((27015L * R + 35149L * G +  3372L * B) >> SQZ_COLOR_LINEAR_PRECISION));
-            int m = SQZ_i32_cbrt_01(cast(int)((13887L * R + 44610L * G +  7038L * B) >> SQZ_COLOR_LINEAR_PRECISION));
-            int s = SQZ_i32_cbrt_01(cast(int)(( 5787L * R + 18462L * G + 41286L * B) >> SQZ_COLOR_LINEAR_PRECISION));
-            *L++ = cast(short) ( (( 862L * l + 3250L * m -   17L * s + (SQZ_COLOR_LINEAR_MAX / 2)) >> SQZ_COLOR_LINEAR_PRECISION) - SQZ_COLOR_OKLAB_LEVEL_OFFSET );
-            *a++ = cast(short) (  (8100L * l - 9945L * m + 1845L * s + (SQZ_COLOR_LINEAR_MAX / 2)) >> SQZ_COLOR_LINEAR_PRECISION );
-            *b++ = cast(short) (  ( 106L * l + 3205L * m - 3311L * s + (SQZ_COLOR_LINEAR_MAX / 2)) >> SQZ_COLOR_LINEAR_PRECISION );
+            ubyte* pInput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                int R = SQZ_sRGB_to_linear[ pInput[3*x+0] ];
+                int G = SQZ_sRGB_to_linear[ pInput[3*x+1] ];
+                int B = SQZ_sRGB_to_linear[ pInput[3*x+2] ];
+                int l = SQZ_i32_cbrt_01(cast(int)((27015L * R + 35149L * G +  3372L * B) >> SQZ_COLOR_LINEAR_PRECISION));
+                int m = SQZ_i32_cbrt_01(cast(int)((13887L * R + 44610L * G +  7038L * B) >> SQZ_COLOR_LINEAR_PRECISION));
+                int s = SQZ_i32_cbrt_01(cast(int)(( 5787L * R + 18462L * G + 41286L * B) >> SQZ_COLOR_LINEAR_PRECISION));
+                *L++ = cast(short) ( (( 862L * l + 3250L * m -   17L * s + (SQZ_COLOR_LINEAR_MAX / 2)) >> SQZ_COLOR_LINEAR_PRECISION) - SQZ_COLOR_OKLAB_LEVEL_OFFSET );
+                *a++ = cast(short) (  (8100L * l - 9945L * m + 1845L * s + (SQZ_COLOR_LINEAR_MAX / 2)) >> SQZ_COLOR_LINEAR_PRECISION );
+                *b++ = cast(short) (  ( 106L * l + 3205L * m - 3311L * s + (SQZ_COLOR_LINEAR_MAX / 2)) >> SQZ_COLOR_LINEAR_PRECISION );
+            }
         }
     }
-    else 
+    else
     {
-        static if (true)
+        for (int y = 0; y < H; ++y)
         {
-            // reference version
-            for (size_t i = 0u; i < length; ++i) 
+            ubyte* pOutput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
             {
                 SQZ_dwt_coefficient_t L_ = cast(short)( (*L++) + SQZ_COLOR_OKLAB_LEVEL_OFFSET ), 
                                       a_ = (*a++), 
@@ -1406,69 +1434,9 @@ void SQZ_color_process_oklab(SQZ_context_t* ctx, void* buffer, int read)
                 long m = (m_ * m_ * m_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
                 long s = (s_ * s_ * s_) >> (SQZ_COLOR_LINEAR_PRECISION * 2);
 
-                static if (true)
-                {
-                    *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((267169L * l - 216771L * m +  15137L * s) >> SQZ_COLOR_LINEAR_PRECISION));
-                    *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((-83127L * l + 171030L * m -  22368L * s) >> SQZ_COLOR_LINEAR_PRECISION));
-                    *ptr++ = SQZ_linear_i32_to_sRGB_u8(cast(int)((  -275L * l -  46099L * m + 111909L * s) >> SQZ_COLOR_LINEAR_PRECISION));
-                }
-                else
-                {
-                    int R = cast(int)((267169L * l - 216771L * m +  15137L * s) >> SQZ_COLOR_LINEAR_PRECISION);
-                    int G = cast(int)((-83127L * l + 171030L * m -  22368L * s) >> SQZ_COLOR_LINEAR_PRECISION);
-                    int B = cast(int)((  -275L * l -  46099L * m + 111909L * s) >> SQZ_COLOR_LINEAR_PRECISION);
-                    __m128i RGBX = _mm_setr_epi32(R, G, B, 0);
-
-                    byte16 b16 = cast(byte16) mmSQZ_linear_i32_to_sRGB_u8(RGBX);
-                    *ptr++ = b16[0];
-                    *ptr++ = b16[1];
-                    *ptr++ = b16[2];
-                }
-            }
-        }
-        else
-        {
-
-            __m128i L_MUL = _mm_set1_epi32(12);
-            __m128i A_MUL = _mm_setr_epi32(25974, -6918, -5864, 0);  // 16-bit signed
-            __m128i B_MUL = _mm_setr_epi32(14143, -4185, -84638, 0); // 18-bit signed
-
-            __m128i l_MUL = _mm_setr_epi32(  267169,   -83127,   -275, 0);
-            __m128i m_MUL = _mm_setr_epi32( -216771,   171030, -46099, 0);
-            __m128i s_MUL = _mm_setr_epi32(   15137,   -22368, 111909, 0);
-
-            // PERF: it's cool that we have only integers, however this need SSE4.1 or AVX to perform
-            // while simply going through SSE2 float would probably be efficient.
-
-            for (size_t i = 0; i < length; ++i) 
-            {
-                int L_ = (*L++) + SQZ_COLOR_OKLAB_LEVEL_OFFSET; // 17-bit signed
-                int a_ = (*a++); // 16-bit signed
-                int b_ = (*b++); // 16-bit signed
-                int L_x12 = L_ * SQZ_COLOR_OKLAB_MUL; // 21 bits maximum
-
-                __m128i mmA = _mm_set1_epi32(a_);
-                __m128i mmB = _mm_set1_epi32(b_);
-
-                __m256i R = _mm256_add_epi64( _mm256_mul_epi32x(mmA, A_MUL), _mm256_mul_epi32x(mmB, B_MUL)); // 18+16+1 bits signed max
-                R = _mm256_srli_epi64(R, SQZ_COLOR_OKLAB_PRECISION); // 18+16+1-12 = 23 bits signed max
-                R = _mm256_add_epi64(R, _mm256_set1_epi64(L_x12)); // 24 signed bits max, probably less
-
-                // pow 3
-                R[0] = R[0] * R[0] * R[0];
-                R[1] = R[1] * R[1] * R[1];
-                R[2] = R[2] * R[2] * R[2];
-                R = _mm256_srli_epi64(R, SQZ_COLOR_OKLAB_PRECISION_X2);
-               // __m128i mmLMS = _mm_setr_epi32(R[0], R[1], R[2], 0);
-
-                __m256i rgb = _mm256_mul_epi32x(_mm_set1_epi32(cast(int)(R[0])), l_MUL);
-                rgb = _mm256_add_epi64(rgb, _mm256_mul_epi32x(_mm_set1_epi32(cast(int)(R[1])), m_MUL));
-                rgb = _mm256_add_epi64(rgb, _mm256_mul_epi32x(_mm_set1_epi32(cast(int)(R[2])), s_MUL));
-                rgb = _mm256_srli_epi64(rgb, SQZ_COLOR_LINEAR_PRECISION);
-
-                *ptr++ = SQZ_linear_i32_to_sRGB_u8( cast(int)rgb[0]);
-                *ptr++ = SQZ_linear_i32_to_sRGB_u8( cast(int)rgb[1]);
-                *ptr++ = SQZ_linear_i32_to_sRGB_u8( cast(int)rgb[2]); // PERF SQZ_linear_i32_to_sRGB_u8
+                pOutput[3*x+0] = SQZ_linear_i32_to_sRGB_u8(cast(int)((267169L * l - 216771L * m +  15137L * s) >> SQZ_COLOR_LINEAR_PRECISION));
+                pOutput[3*x+1] = SQZ_linear_i32_to_sRGB_u8(cast(int)((-83127L * l + 171030L * m -  22368L * s) >> SQZ_COLOR_LINEAR_PRECISION));
+                pOutput[3*x+2] = SQZ_linear_i32_to_sRGB_u8(cast(int)((  -275L * l -  46099L * m + 111909L * s) >> SQZ_COLOR_LINEAR_PRECISION));
             }
         }
     }
@@ -1500,65 +1468,76 @@ Based on "Exploiting context dependence for image compression with upsampling" -
                             [https://arxiv.org/abs/2004.03391]
 */
 
-void SQZ_color_process_logl1(SQZ_context_t* ctx, void* buffer, int read) 
+void SQZ_color_process_logl1(SQZ_context_t* ctx, void* bufscan, int pitchBytes, int read) 
 {
+    int W = cast(int) ctx.image.width;
+    int H = cast(int) ctx.image.height;
     SQZ_dwt_coefficient_t * Y = ctx.plane[0].data, 
                            c0 = ctx.plane[1].data, 
                            c1 = ctx.plane[2].data;
-    ubyte* ptr = cast(ubyte*)buffer;
     size_t length = ctx.image.width * ctx.image.height;
     if (read) 
     {
-        for (size_t i = 0u; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            SQZ_dwt_coefficient_t R = *ptr++, G = *ptr++, B = *ptr++;
-            *Y++ = cast(short)( (( 33779 * R + 41184 * G + 38182 * B) >> 16) - SQZ_COLOR_LOGL1_LEVEL_OFFSET );
-            *c0++ = (-52830 * R +  8188 * G + 37906 * B) >> 16;
-            *c1++ = ( 19051 * R - 50317 * G + 37420 * B) >> 16;
+            ubyte* pInput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                SQZ_dwt_coefficient_t R = pInput[3*x+0], 
+                                      G = pInput[3*x+1], 
+                                      B = pInput[3*x+2];
+                *Y++ = cast(short)( (( 33779 * R + 41184 * G + 38182 * B) >> 16) - SQZ_COLOR_LOGL1_LEVEL_OFFSET );
+                *c0++ = (-52830 * R +  8188 * G + 37906 * B) >> 16;
+                *c1++ = ( 19051 * R - 50317 * G + 37420 * B) >> 16;
+            }
 
         }
     }
     else 
     {
-        for (size_t i = 0u; i < length; ++i) 
+        for (int y = 0; y < H; ++y)
         {
-            SQZ_dwt_coefficient_t Y_ = cast(short)( (*Y++) + SQZ_COLOR_LOGL1_LEVEL_OFFSET ), 
-                                  c0_ = (*c0++), 
-                                  c1_ = (*c1++);
-            SQZ_dwt_coefficient_t R = (33779 * Y_ - 52830 * c0_ + 19051 * c1_) >> 16;
-            SQZ_dwt_coefficient_t G = (41184 * Y_ +  8188 * c0_ - 50317 * c1_) >> 16;
-            SQZ_dwt_coefficient_t B = (38182 * Y_ + 37906 * c0_ + 37420 * c1_) >> 16;
-            *ptr++ = SQZ_COLOR_CLIP(R);
-            *ptr++ = SQZ_COLOR_CLIP(G);
-            *ptr++ = SQZ_COLOR_CLIP(B);
+            ubyte* pOutput = (cast(ubyte*)bufscan) + y * pitchBytes;
+            for (int x = 0; x < W; ++x)
+            {
+                SQZ_dwt_coefficient_t Y_ = cast(short)( (*Y++) + SQZ_COLOR_LOGL1_LEVEL_OFFSET ), 
+                                      c0_ = (*c0++), 
+                                      c1_ = (*c1++);
+                SQZ_dwt_coefficient_t R = (33779 * Y_ - 52830 * c0_ + 19051 * c1_) >> 16;
+                SQZ_dwt_coefficient_t G = (41184 * Y_ +  8188 * c0_ - 50317 * c1_) >> 16;
+                SQZ_dwt_coefficient_t B = (38182 * Y_ + 37906 * c0_ + 37420 * c1_) >> 16;
+                pOutput[3*x+0] = SQZ_COLOR_CLIP(R);
+                pOutput[3*x+1] = SQZ_COLOR_CLIP(G);
+                pOutput[3*x+2] = SQZ_COLOR_CLIP(B);
+            }
         }
     }
 }
 
 // warning: read == 0 means an image is decoded
 //          read == 1 means an image is encoded
-void SQZ_color_process(SQZ_context_t* ctx, void* buffer, int read) 
+void SQZ_color_process(SQZ_context_t* ctx, void* bufscan, int pitchBytes, int read) 
 {
     switch (ctx.image.color_mode) 
     {
         case SQZ_COLOR_MODE_GRAYSCALE: 
         {
-            SQZ_color_process_grayscale(ctx, buffer, read);
+            SQZ_color_process_grayscale(ctx, bufscan, pitchBytes, read);
             break;
         }
         case SQZ_COLOR_MODE_YCOCG_R: 
         {
-            SQZ_color_process_ycocg_r(ctx, buffer, read);
+            SQZ_color_process_ycocg_r(ctx, bufscan, pitchBytes, read);
             break;
         }
         case SQZ_COLOR_MODE_OKLAB: 
         {
-            SQZ_color_process_oklab(ctx, buffer, read);
+            SQZ_color_process_oklab(ctx, bufscan, pitchBytes, read);
             break;
         }
         case SQZ_COLOR_MODE_LOG_L1: 
         {
-            SQZ_color_process_logl1(ctx, buffer, read);
+            SQZ_color_process_logl1(ctx, bufscan, pitchBytes, read);
             break;
         }
         default:
@@ -2226,7 +2205,7 @@ SQZ_status_t SQZ_validate_input(SQZ_image_descriptor_t* descriptor, int read_onl
 * \param[in,out]   budget : Pointer to the byte budget allowed for compression, will be updated with the final compressed data size
 * \return          \ref SQZ_RESULT_OK on success, member of \ref SQZ_status_t otherwise
 */
-SQZ_status_t SQZ_encode(void* source, void* dest, SQZ_image_descriptor_t* descriptor, size_t* budget) 
+SQZ_status_t SQZ_encode(void* psource, int pitchBytes, void* dest, SQZ_image_descriptor_t* descriptor, size_t* budget) 
 {
     SQZ_status_t result = SQZ_validate_input(descriptor, 0);
     if (result != SQZ_RESULT_OK) {
@@ -2243,7 +2222,7 @@ SQZ_status_t SQZ_encode(void* source, void* dest, SQZ_image_descriptor_t* descri
         SQZ_common_free_context(&ctx);
         return result;
     }
-    SQZ_color_process(&ctx, source, 1);
+    SQZ_color_process(&ctx, psource, pitchBytes, 1);
     result = SQZ_dwt(&ctx);
     if (result != SQZ_RESULT_OK) {
         SQZ_common_free_context(&ctx);
@@ -2272,7 +2251,7 @@ SQZ_status_t SQZ_encode(void* source, void* dest, SQZ_image_descriptor_t* descri
 * \return          \ref SQZ_RESULT_OK on success, member of \ref SQZ_status_t otherwise
 */
 SQZ_status_t
-SQZ_decode(void* source, void* dest, size_t src_size, size_t* dest_size, SQZ_image_descriptor_t* descriptor) 
+SQZ_decode(void* source, void* dest, int pitchBytes, size_t src_size, size_t* dest_size, SQZ_image_descriptor_t* descriptor) 
 {
     if ((source == null) || (dest_size == null) || ((dest == null) && (*dest_size != 0u))) {
         return SQZ_INVALID_PARAMETER;
@@ -2311,7 +2290,7 @@ SQZ_decode(void* source, void* dest, size_t src_size, size_t* dest_size, SQZ_ima
         SQZ_common_free_context(&ctx);
         return result;
     }
-    SQZ_color_process(&ctx, dest, 0);
+    SQZ_color_process(&ctx, dest, pitchBytes, 0);
     SQZ_common_free_context(&ctx);
     return SQZ_RESULT_OK;
 }
