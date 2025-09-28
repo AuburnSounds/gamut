@@ -1,0 +1,16 @@
+{
+    "name": "image-resize",
+    "description": "Decode an image, resize it and reencode.",
+    "license": "BSL-1.0",
+
+    "dependencies": {
+        "gamut": { "path": "../.." },
+        "stb_image_resize2-d": "~>1.0",
+        "colors": "~>0.0"
+    },
+
+    "subConfigurations":
+    {
+        "gamut": "boost+mit"
+    }
+}
