@@ -12,13 +12,12 @@ void usage()
     writeln;
     writeln("Usage: image-resize <input.ext> -w <width> -h <height> <output.ext>\n");
     writeln;
-    writeln("Params:");   
+    writeln("Params:");
     writeln("  -w               Set width (default: keep)");
     writeln("  -h               Set height  (default: keep)");
     writeln("  --help           Shows this help");
     writeln;
 }
-
 
 int main(string[] args)
 {
@@ -30,7 +29,7 @@ int main(string[] args)
         int h = -1;
         bool help = false;
 
-        for(int i = 1; i < args.length; ++i)
+        for (int i = 1; i < args.length; ++i)
         {
             string arg = args[i];
             if (arg == "--help")
@@ -45,7 +44,7 @@ int main(string[] args)
             {
                 h = to!int(args[++i]);
             }
-             else
+            else
             {
                 if (inputPath)
                 {
@@ -89,18 +88,14 @@ int main(string[] args)
         Image outimg;
         outimg.create(targetW, targetH, PixelType.rgba8);
 
-
         void* res = stbir_resize(inimg.scanptr(0), inimg.width, inimg.height, inimg.pitchInBytes,
-                                 outimg.scanptr(0), outimg.width, outimg.height, outimg.pitchInBytes,
-                                 STBIR_RGBA,
-                                 STBIR_TYPE_UINT8_SRGB,
-                                 STBIR_EDGE_CLAMP,
-                                 STBIR_FILTER_DEFAULT);
+            outimg.scanptr(0), outimg.width, outimg.height, outimg.pitchInBytes,
+            STBIR_RGBA,
+            STBIR_TYPE_UINT8_SRGB,
+            STBIR_EDGE_CLAMP,
+            STBIR_FILTER_DEFAULT);
 
         assert(res);
-
-
-    
 
         // resize
 
@@ -113,7 +108,7 @@ int main(string[] args)
         writefln(" => Written to %s", outputPath);
         return 0;
     }
-    catch(Exception e)
+    catch (Exception e)
     {
         writefln("error: %s", e.message);
         usage();
