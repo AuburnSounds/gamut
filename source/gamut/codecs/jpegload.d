@@ -543,8 +543,14 @@ public:
   // Returns JPGD_DONE if all scan lines have been returned.
   // Returns JPGD_FAILED if an error occurred. Inspect `error_code` for a more info.
   int decode (/*const void** */void** pScan_line, uint* pScan_line_len) {
-    if (m_error_code || !m_ready_flag) return JPGD_FAILED;
-    if (m_total_lines_left == 0) return JPGD_DONE;
+    if (m_error_code || !m_ready_flag) 
+    {
+        return JPGD_FAILED;
+    }
+    if (m_total_lines_left == 0) 
+    {
+        return JPGD_DONE;
+    }
 
       if (m_mcu_lines_left == 0) {
         if (m_progressive_flag) 
@@ -1569,7 +1575,7 @@ private:
   // Process markers. Returns when an SOFx, SOI, EOI, or SOS marker is
   // encountered.
   // Return true in *err on error, and then the return value is wrong.
-  int process_markers (bool* err) {
+  int process_markers (bool* err, bool allow_restarts = false) {
     int c;
 
     for ( ; ; ) {
@@ -1809,7 +1815,6 @@ private:
             }
             break;
 
-        case M_JPG:
         case M_RST0:    /* no parameters */
         case M_RST1:
         case M_RST2:
@@ -1818,6 +1823,14 @@ private:
         case M_RST5:
         case M_RST6:
         case M_RST7:
+            if(allow_restarts)
+                continue;
+            else
+            {
+                *err = true;
+                return 0;
+            }
+        case M_JPG:
         case M_TEM:
           {
             *err = true;
@@ -2825,7 +2838,8 @@ private:
       if (err) return false;
 
       // The next marker _should_ be EOI
-      process_markers(&err);
+      // allow skipping RSTx markers though (Issue #93)
+      process_markers(&err, true);
       if (err) return false;
     }
 
