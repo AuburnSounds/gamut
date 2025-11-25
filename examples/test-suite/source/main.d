@@ -20,6 +20,7 @@ void main(string[] args)
     testIssue65();
     testIssue67();
     testIssue77();
+    testIssue92();
     testImageFmtCompat();
     testExtremePNGLevel();
 }
@@ -236,6 +237,17 @@ void testExtremePNGLevel()
     image.loadFromFile("q10.png");
     assert(image.isValid);
     image.loadFromFile("qfast.png");
+    assert(image.isValid);
+}
+
+void testIssue92()
+{
+    // Support reading PNG with missing IEND chunk at the end,
+    // or end-truncated.
+    Image image;
+    image.loadFromFile("test-images/issue92-truncated-in-CRC.png");
+    assert(image.isValid);
+    image.loadFromFile("test-images/issue92-no-IEND.png");
     assert(image.isValid);
 }
 

@@ -1797,6 +1797,66 @@ version(decodePNG)
 
         if (scan == STBI__SCAN_type) return 1;
 
+        int finalize_decode() nothrow @nogc
+        {
+            stbi__uint32 raw_len, bpl;
+            if (scan != STBI__SCAN_load) return 1;
+            if (z.idata == null) 
+            {
+                return 0; //stbi__err("no IDAT","Corrupt PNG");
+            }
+            // initial guess for decoded data size to avoid unnecessary reallocs
+            bpl = (s.img_x * z.depth + 7) / 8; // bytes per line, per component
+            raw_len = bpl * s.img_y * s.img_n /* pixels */ + s.img_y /* filter mode per row */;
+            z.expanded = cast(stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag(cast(char *) z.idata, 
+                                                                                      ioff, 
+                                                                                      raw_len, 
+                                                                                      cast(int *) &raw_len, 
+                                                                                      !is_iphone);
+            if (z.expanded == null) 
+            {
+                return 0; // zlib should set error
+            }
+            STBI_FREE(z.idata); z.idata = null;
+            if ((req_comp == s.img_n+1 && req_comp != 3 && !pal_img_n) || has_trans)
+                s.img_out_n = s.img_n+1;
+            else
+                s.img_out_n = s.img_n;
+            if (!stbi__create_png_image(z, z.expanded, raw_len, s.img_out_n, z.depth, color, interlace))
+            {
+                return 0;
+            }
+            if (has_trans) {
+                if (z.depth == 16) {
+                    if (!stbi__compute_transparency16(z, tc16.ptr, s.img_out_n))
+                    {
+                        return 0;
+                    }
+                } else {
+                    if (!stbi__compute_transparency(z, tc.ptr, s.img_out_n))
+                    {
+                        return 0;
+                    }
+                }
+            }
+
+            if (pal_img_n) {
+                // pal_img_n == 3 or 4
+                s.img_n = pal_img_n; // record the actual colors we had
+                s.img_out_n = pal_img_n;
+                if (req_comp >= 3) s.img_out_n = req_comp;
+                if (!stbi__expand_png_palette(z, palette.ptr, pal_len, s.img_out_n))
+                {
+                    return 0;
+                }
+            } else if (has_trans) {
+                // non-paletted image with tRNS . source image has (constant) alpha
+                ++s.img_n;
+            }
+            STBI_FREE(z.expanded); z.expanded = null;
+            return 1;
+        }
+
         for (;;) {
             stbi__pngchunk c = stbi__get_chunk_header(s);
             uint aaaa = c.type;
@@ -1811,7 +1871,7 @@ version(decodePNG)
                     s.ppmY = stbi__get32be(s);
                     s.pixelAspectRatio = s.ppmX / s.ppmY;
                     ubyte unit = stbi__get8(s);
-                    if (unit != 1)                    
+                    if (unit != 1)
                     {
                         s.ppmX = -1; // only contains an aspect ratio, but no physical resolution
                         s.ppmY = -1;
@@ -1929,62 +1989,11 @@ version(decodePNG)
                 }
 
                 case STBI__PNG_TYPE('I','E','N','D'): {
-                    stbi__uint32 raw_len, bpl;
                     if (first) return 0; //stbi__err("first not IHDR", "Corrupt PNG");
-                    if (scan != STBI__SCAN_load) return 1;
-                    if (z.idata == null) 
-                    {
-                        return 0; //stbi__err("no IDAT","Corrupt PNG");
-                    }
-                    // initial guess for decoded data size to avoid unnecessary reallocs
-                    bpl = (s.img_x * z.depth + 7) / 8; // bytes per line, per component
-                    raw_len = bpl * s.img_y * s.img_n /* pixels */ + s.img_y /* filter mode per row */;
-                    z.expanded = cast(stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag(cast(char *) z.idata, 
-                                                                                              ioff, 
-                                                                                              raw_len, 
-                                                                                              cast(int *) &raw_len, 
-                                                                                              !is_iphone);
-                    if (z.expanded == null) 
-                    {
-                        return 0; // zlib should set error
-                    }
-                    STBI_FREE(z.idata); z.idata = null;
-                    if ((req_comp == s.img_n+1 && req_comp != 3 && !pal_img_n) || has_trans)
-                        s.img_out_n = s.img_n+1;
-                    else
-                        s.img_out_n = s.img_n;
-                    if (!stbi__create_png_image(z, z.expanded, raw_len, s.img_out_n, z.depth, color, interlace))
-                    {
-                        return 0;
-                    }
-                    if (has_trans) {
-                        if (z.depth == 16) {
-                            if (!stbi__compute_transparency16(z, tc16.ptr, s.img_out_n))
-                            {
-                                return 0;
-                            }
-                        } else {
-                            if (!stbi__compute_transparency(z, tc.ptr, s.img_out_n))
-                            {
-                                return 0;
-                            }
-                        }
-                    }
+                    int res = finalize_decode();
+                    if (!res)
+                        return res;
 
-                    if (pal_img_n) {
-                        // pal_img_n == 3 or 4
-                        s.img_n = pal_img_n; // record the actual colors we had
-                        s.img_out_n = pal_img_n;
-                        if (req_comp >= 3) s.img_out_n = req_comp;
-                        if (!stbi__expand_png_palette(z, palette.ptr, pal_len, s.img_out_n))
-                        {
-                            return 0;
-                        }
-                    } else if (has_trans) {
-                        // non-paletted image with tRNS . source image has (constant) alpha
-                        ++s.img_n;
-                    }
-                    STBI_FREE(z.expanded); z.expanded = null;
                     // end of PNG chunk, read and skip CRC
                     stbi__get32be(s);
                     return 1;
@@ -1995,6 +2004,11 @@ version(decodePNG)
                     if (first)
                     {
                         return 0; //stbi__err("first not IHDR", "Corrupt PNG");
+                    }
+                    if (c.type == 0 && stbi__at_eof(s))
+                    {
+                        // Gamut Issue #92: some PNG just don't have IEND.
+                        return finalize_decode();
                     }
                     if ((c.type & (1 << 29)) == 0) 
                     {
