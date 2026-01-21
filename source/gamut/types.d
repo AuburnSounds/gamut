@@ -249,14 +249,18 @@ enum int ENCODE_PNG_FILTER_DEFAULT = 0,
 
 /// SQZ Encode: Test all filter (default) or just one.
 enum int ENCODE_SQZ_QUALITY_DEFAULT = 0,         // Not 0 bpp, it defaults to 2.5 bit per pixel in RGB8.
-         ENCODE_SQZ_QUALITY_BPP1_0  = 0x20 << 5, // Budget = 1.0  bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP1_25 = 0x28 << 5, // Budget = 1.25 bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP1_5  = 0x30 << 5, // Budget = 1.5  bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP1_75 = 0x38 << 5, // Budget = 1.75 bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP2_0  = 0x40 << 5, // Budget = 2.0  bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP2_25 = 0x48 << 5, // Budget = 2.25 bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP2_5  = 0x50 << 5, // Budget = 2.5  bpp per pixel
-         ENCODE_SQZ_QUALITY_BPP2_75 = 0x58 << 5, // Budget = 2.75 bpp per pixel
+         ENCODE_SQZ_QUALITY_BPP1_0  = 0x20 << 5, // Budget = 1.0  bpp
+         ENCODE_SQZ_QUALITY_BPP1_25 = 0x28 << 5, // Budget = 1.25 bpp
+         ENCODE_SQZ_QUALITY_BPP1_5  = 0x30 << 5, // Budget = 1.5  bpp
+         ENCODE_SQZ_QUALITY_BPP1_75 = 0x38 << 5, // Budget = 1.75 bpp
+         ENCODE_SQZ_QUALITY_BPP2_0  = 0x40 << 5, // Budget = 2.0  bpp
+         ENCODE_SQZ_QUALITY_BPP2_25 = 0x48 << 5, // Budget = 2.25 bpp
+         ENCODE_SQZ_QUALITY_BPP2_5  = 0x50 << 5, // Budget = 2.5  bpp
+         ENCODE_SQZ_QUALITY_BPP2_75 = 0x58 << 5, // Budget = 2.75 bpp
+         ENCODE_SQZ_QUALITY_BPP3_0  = 0x60 << 5, // Budget = 3.0  bpp
+         ENCODE_SQZ_QUALITY_BPP3_25 = 0x68 << 5, // Budget = 3.25 bpp
+         ENCODE_SQZ_QUALITY_BPP3_5  = 0x70 << 5, // Budget = 3.5  bpp
+         ENCODE_SQZ_QUALITY_BPP3_75 = 0x78 << 5, // Budget = 3.75 bpp
          ENCODE_SQZ_QUALITY_MAX     = 0xff << 5; // Considering this is ~8 bpp this should be lossless
 
 /// Layout constraints flags (bits 0 to 15).

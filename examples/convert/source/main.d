@@ -223,8 +223,12 @@ int[string] buildEncodeFlags()
         "ENCODE_SQZ_QUALITY_BPP1_75": 0x38 << 5, 
         "ENCODE_SQZ_QUALITY_BPP2_0":  0x40 << 5, 
         "ENCODE_SQZ_QUALITY_BPP2_25": 0x48 << 5, 
-        "ENCODE_SQZ_QUALITY_BPP2_5":  0x50 << 5, // if you want to beat guetzli this is alright
+        "ENCODE_SQZ_QUALITY_BPP2_5":  0x50 << 5, 
         "ENCODE_SQZ_QUALITY_BPP2_75": 0x58 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP3_0":  0x60 << 5, // at this point, guetzli should be beaten in terms of quality
+        "ENCODE_SQZ_QUALITY_BPP3_25": 0x68 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP3_5":  0x70 << 5, 
+        "ENCODE_SQZ_QUALITY_BPP3_75": 0x78 << 5, 
         "ENCODE_SQZ_QUALITY_MAX":     0xff << 5,
     ];
     return flags;
