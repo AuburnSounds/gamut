@@ -13,13 +13,12 @@ void usage()
 {
     writeln();
     writeln("Usage: qoix\n");
-    writeln("   This just run the test suite.");
+    writeln("   This just run the test suite. Used to optimize one format in either speed or compression.");
     writeln;
 }
 
 int main(string[] args)
 {    
-    // Encore all image in test suite in QOI
     auto files = filter!`endsWith(a.name,".png") || endsWith(a.name,".jpg") || endsWith(a.name,".jxl")`(dirEntries("test-images",SpanMode.depth));
 
     double mean_encode_mpps = 0;
@@ -54,32 +53,35 @@ int main(string[] args)
 
         writefln(" (%s)", image.type);
 
-        ubyte[] qoix_encoded;
-        double qoix_encode_ms = measure( { qoix_encoded = image.saveToMemory(ImageFormat.SQZ); } );
-        scope(exit) freeEncodedImage(qoix_encoded);
+        ImageFormat codec = ImageFormat.SQZ;
 
-        if (qoix_encoded is null)
+        // Encode in a particular codec
+        ubyte[] encoded;
+        double encode_ms = measure( { encoded = image.saveToMemory(codec); } );
+        scope(exit) freeEncodedImage(encoded);
+
+        if (encoded is null)
             throw new Exception("encoding failed");
 
-        double qoix_size_kb = qoix_encoded.length / 1024.0;
-        double qoix_decode_ms = measure( { image.loadFromMemory(qoix_encoded); } );
-        double qoix_encode_mpps = (width * height * 1.0e-6) / (qoix_encode_ms * 0.001);
-        double qoix_decode_mpps = (width * height * 1.0e-6) / (qoix_decode_ms * 0.001);
-        double bit_per_pixel = (qoix_encoded.length * 8.0) / (width * height);
+        double size_kb = encoded.length / 1024.0;
+        double decode_ms = measure( { image.loadFromMemory(encoded); } );
+        double encode_mpps = (width * height * 1.0e-6) / (encode_ms * 0.001);
+        double decode_mpps = (width * height * 1.0e-6) / (decode_ms * 0.001);
+        double bit_per_pixel = (encoded.length * 8.0) / (width * height);
 
-        mean_encode_mpps += qoix_encode_mpps;
-        mean_decode_mpps += qoix_decode_mpps;
+        mean_encode_mpps += encode_mpps;
+        mean_decode_mpps += decode_mpps;
         mean_bpp += bit_per_pixel;
-        double size_vs_original = qoix_size_kb / original_size_kb;
+        double size_vs_original = size_kb / original_size_kb;
 
         writefln("    orig dec          decode      decode mpps   encode mpps      bit-per-pixel        size        reduction");
-        writefln("  %8.2f ms      %8.2f ms       %8.2f      %8.2f           %8.5f     %9.1f kb  %9.4f", orig_decode_ms, qoix_decode_ms, qoix_decode_mpps, qoix_encode_mpps, bit_per_pixel, qoix_size_kb, size_vs_original);
+        writefln("  %8.2f ms      %8.2f ms       %8.2f      %8.2f           %8.5f     %9.1f kb  %9.4f", orig_decode_ms, decode_ms, decode_mpps, encode_mpps, bit_per_pixel, size_kb, size_vs_original);
         N += 1;
 
-        // Check encoding is properly done.
+        // To check visually if encoding is properly done.
         {
             Image image2;
-            image2.loadFromMemory(qoix_encoded);
+            image2.loadFromMemory(encoded);
             assert(!image2.isError);
             string path = "output/" ~ baseName(f) ~ ".png";
             image2.saveToFile(path, ImageFormat.PNG);
