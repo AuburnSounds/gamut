@@ -3,8 +3,21 @@
     "description": "QOIX encoder/decoder test suite.",
     "license": "BSL-1.0",
 
-    "dependencies": 
+    "dependencies":
     {
         "gamut": { "path": "../.." }
-    }
+    },
+
+    "configurations":
+    [
+        {
+            "name": "default",
+            "targetType": "executable"
+        },
+        {
+            "name": "stats",
+            "targetType": "executable",
+            "versions": ["qoixStats"]
+        }
+    ]
 }

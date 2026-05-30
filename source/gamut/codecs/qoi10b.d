@@ -86,6 +86,26 @@ enum ubyte QOI_OP_ADIFF2 = 0xf8;
 
 enum int WORST_OPCODE_BITS = 48;
 
+version(qoixStats)
+{
+    __gshared long qois_run;
+    __gshared long qois_adiff;
+    __gshared long qois_adiff2;
+    __gshared long qois_rgba;
+    __gshared long qois_luma0;
+    __gshared long qois_luma;
+    __gshared long qois_gray;
+    __gshared long qois_luma2;
+    __gshared long qois_luma3;
+    __gshared long qois_rgb;
+
+    void qoi10b_clear_stats() nothrow @nogc
+    {
+        qois_run = qois_adiff = qois_adiff2 = qois_rgba = qois_luma0 = 0;
+        qois_luma = qois_gray = qois_luma2 = qois_luma3 = qois_rgb = 0;
+    }
+}
+
 enum enableAveragePrediction = true; 
 
 enum bool newpred = false;//true;
@@ -206,6 +226,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
 
     void encodeRun()
     {
+        version(qoixStats) qois_run++;
         assert(run > 0 && run <= 256);
         run--;
         if (run < 7) 
@@ -301,15 +322,18 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                         if (va < 16 || va >= (1024 - 16)) // does it fit on 5 bits?
                         {
                             // it fits on 5 bits
+                            version(qoixStats) qois_adiff++;
                             outputBits((0x1d << 5) | (va & 0x1f), 10); // QOI_OP_ADIFF
                         }
                         else if (va < 128 || va >= (1024 - 128)) // does it fit on 8 bits?
                         {
+                            version(qoixStats) qois_adiff2++;
                             outputBits( (QOI_OP_ADIFF2 >>> 2), 6);
-                            outputBits(va, 8);  
+                            outputBits(va, 8);
                         }
                         else
                         {
+                            version(qoixStats) qois_rgba++;
                             outputByte(QOI_OP_RGBA);
                             outputBits(px.r, 10);
                             if (!streamIsGrey)
@@ -364,6 +388,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                          ( (vg   >= (1024-8)) || (vg   < 8) ) &&    // fits in 4 bits?
                         ( (vg_b >= (1024- 4)) || (vg_b <  4) ) )   // fits in 3 bits?
                     {
+                        version(qoixStats) qois_luma0++;
                         outputBits(0x20 | (vg & 0x0f), 6); // QOI_OP_LUMA0
                         if (!streamIsGrey)
                         {
@@ -374,6 +399,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                          ( (vg   >= (1024-16)) || (vg   < 16) ) &&  // fits in 5 bits?
                          ( (vg_b >= (1024- 8)) || (vg_b <  8) ) )   // fits in 4 bits?
                     {
+                        version(qoixStats) qois_luma++;
                         outputBits(vg & 0x1f, 6); // QOI_OP_LUMA
                         if (!streamIsGrey)
                         {
@@ -381,10 +407,11 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                             outputBits(vg_b, 4);
                         }
                     }
-                    else if (!streamIsGrey && px.g == px.r && px.g == px.b) 
-                    {  
+                    else if (!streamIsGrey && px.g == px.r && px.g == px.b)
+                    {
                         // Note: in greyscale, more expensive than QOI_OP_LUMA2
                         // This opcode should not be used if input is grey.
+                        version(qoixStats) qois_gray++;
                         outputByte(QOI_OP_GRAY);
                         outputBits(px.g, 10);
                     }
@@ -393,6 +420,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                          ( (vg   >= (1024-64)) || (vg   < 64) ) &&  // fits in 7 bits?
                          ( (vg_b >= (1024-32)) || (vg_b < 32) ) )   // fits in 6 bits?
                     {
+                        version(qoixStats) qois_luma2++;
                         outputBits((0x6 << 7) | (vg & 0x7f), 10); // QOI_OP_LUMA2
                         if (!streamIsGrey)
                         {
@@ -405,6 +433,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                          ( (vg   >= (1024-256)) || (vg   < 256) ) && // fits in 9 bits?
                          ( (vg_b >= (1024-128)) || (vg_b < 128) ) )   // fits in 8 bits?
                     {
+                        version(qoixStats) qois_luma3++;
                         outputBits((0x1c << 9) | (vg & 0x1ff), 14); // QOI_OP_LUMA3
                         if (!streamIsGrey)
                         {
@@ -414,6 +443,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                     } 
                     else
                     {
+                        version(qoixStats) qois_rgb++;
                         outputByte(QOI_OP_RGB);
                         outputBits(px.r, 10);
                         if (!streamIsGrey)
