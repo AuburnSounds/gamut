@@ -42,7 +42,7 @@ int main(string[] args)
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
 
-        image.convertTo(PixelType.rgb8);
+        image.convertTo(PixelType.rgba16);
         image.setLayout(LAYOUT_GAPLESS | LAYOUT_VERT_STRAIGHT);
 
         int width = image.width;
@@ -53,7 +53,7 @@ int main(string[] args)
 
         writefln(" (%s)", image.type);
 
-        ImageFormat codec = ImageFormat.SQZ;
+        ImageFormat codec = ImageFormat.QOIX;
 
         // Encode in a particular codec
         ubyte[] encoded;
