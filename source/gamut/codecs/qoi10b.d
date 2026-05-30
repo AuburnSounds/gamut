@@ -322,7 +322,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
 
                 {
                     int va = (px.a - px_ref.a) & 1023;
-                    if (va) 
+                    if (va)
                     {
                         if (va < 16 || va >= (1024 - 16)) // does it fit on 5 bits?
                         {
@@ -362,7 +362,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
                                 px_ref.g = lastScanlineConverted[posx].g;
                                 px_ref.b = lastScanlineConverted[posx].b;
                             }
-                            else 
+                            else
                             {
                                 qoi10_rgba_t pred = locoIntraPredictionSIMD(px_ref, lastScanlineConverted[posx], lastScanlineConverted[posx-1]);
                                 px_ref.r = pred.r;
