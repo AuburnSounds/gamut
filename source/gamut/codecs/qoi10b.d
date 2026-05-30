@@ -108,8 +108,6 @@ version(qoixStats)
 
 enum enableAveragePrediction = true; 
 
-enum bool newpred = false;//true;
-
 static immutable ubyte[5] qoi10b_padding = [255,255,255,255,255];
 
 enum qoi10_rgba_t initialPredictor = { r:0, g:0, b:0, a:1023 };
@@ -165,10 +163,17 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
         return null;
     }
 
+    // 1 = original QOI-10b
+    // 2 = improved QOI-10b (new prediction)
+    ubyte qoix_version = 1;
+
+    // Encoding is disabled for now.
+    // As for decode, decoding v1 QOI-10b should be supported.
+
     qoi_write_32(bytes, &p, QOIX_MAGIC);
     qoi_write_32(bytes, &p, desc.width);
     qoi_write_32(bytes, &p, desc.height);
-    bytes[p++] = 1; // Put a version number :)
+    bytes[p++] = qoix_version;
     bytes[p++] = desc.channels; // 1, 2, 3 or 4
     bytes[p++] = desc.bitdepth; // 10
     bytes[p++] = desc.colorspace;
@@ -348,7 +353,7 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
 
                     if (posy > 0 && enableAveragePrediction)
                     {
-                        static if (newpred)
+                        if (qoix_version >= 2)
                         {
                             if (posx == 0)
                             {
@@ -510,7 +515,7 @@ ubyte* qoi10b_decode(const(void)* data, int size, qoi_desc *desc, int channels)
     header_magic = qoi_read_32(bytes, &p);
     desc.width = qoi_read_32(bytes, &p);
     desc.height = qoi_read_32(bytes, &p);
-    int qoix_version = bytes[p++];
+    const int qoix_version = bytes[p++];
     desc.channels = bytes[p++];
     desc.bitdepth = bytes[p++];
     desc.colorspace = bytes[p++];
@@ -522,7 +527,7 @@ ubyte* qoi10b_decode(const(void)* data, int size, qoi_desc *desc, int channels)
         desc.channels < 1 || desc.channels > 4 ||
         desc.colorspace > 2 ||
         desc.bitdepth != 10 ||
-        qoix_version > 1 ||
+        qoix_version > 2 ||
         desc.compression != QOIX_COMPRESSION_NONE ||
         header_magic != QOIX_MAGIC ||
         desc.height >= QOIX_PIXELS_MAX / desc.width
@@ -622,7 +627,7 @@ ubyte* qoi10b_decode(const(void)* data, int size, qoi_desc *desc, int channels)
 
                 if (posy > 0 && enableAveragePrediction)
                 {
-                    static if (newpred)
+                    if (qoix_version >= 2)
                     {
                         if (posx == 0)
                         {
@@ -631,7 +636,7 @@ ubyte* qoi10b_decode(const(void)* data, int size, qoi_desc *desc, int channels)
                             px_ref.g = lastDecodedScanline[posx].g;
                             px_ref.b = lastDecodedScanline[posx].b;
                         }
-                        else 
+                        else
                         {
                             qoi10_rgba_t pred = locoIntraPredictionSIMD(px_ref, lastDecodedScanline[posx], lastDecodedScanline[posx-1]);
                             px_ref.r = pred.r;
