@@ -8,8 +8,9 @@ import core.stdc.string: memset;
 import gamut.codecs.qoi2avg;
 
 /// A QOI-inspired codec for 10-bit greyscale (and greyscale + alpha) images,
-/// called "QOI-plane-10b". Like `qoiplane` it predicts each luma sample against
-/// the average of the left and top pixel and encodes the residual, but it is
+/// called "QOI-plane-10b". It predicts each luma sample with the LOCO-I / JPEG-LS
+/// MED predictor over the left/top/topleft neighbours (same predictor that won in
+/// qoi10b v2) and encodes the residual; alpha is predicted from the left only. It is
 /// 2-bit aligned (like qoi10b) rather than nibble aligned, which lets the common
 /// small residual use a single tag bit (6 bits total for +/-16, same as qoi10b's
 /// grey LUMA), while adding tiers qoi10b lacks or wastes in greyscale.
@@ -99,6 +100,24 @@ version(qoixStats)
 
 
 enum bool enableAveragePrediction = true;
+
+// Scalar LOCO-I / JPEG-LS MED (median edge detector) predictor, on 10-bit luma.
+//   left = decoded pixel to the left, top = pixel above, topleft = pixel above-left.
+// This is the de-SIMD'd form of qoi10b's locoIntraPredictionSIMD (which runs it on
+// RGBA lanes); here we only need the luma lane. Same predictor that won in qoi10b.
+static int locoPredict(int left, int top, int topleft) nothrow @nogc
+{
+    int max_ab = left > top ? left : top;
+    int min_ab = left < top ? left : top;
+    if (topleft >= max_ab)
+        return min_ab;
+    else if (topleft <= min_ab)
+        return max_ab;
+    int d = left + top - topleft;
+    if (d < 0) d = 0;
+    if (d > 1023) d = 1023;
+    return d;
+}
 
 /* Encode raw L16/LA16 pixels into a QOI-plane-10b image in memory.
 The function either returns null on failure or a pointer to the encoded data on
@@ -251,10 +270,17 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
 
                 if (!encoded)
                 {
-                    // luma residual vs average of left (px_ref) and top pixel
-                    int px_top = (posy > 0) ? (lineAbove[posx * channels] >>> 6) : px_ref.l;
-                    int px_avg = (px_top + px_ref.l + 1) >> 1;
-                    int vg = (cast(int)px.l - px_avg) & 1023;
+                    // luma residual vs LOCO-I prediction of left/top/topleft
+                    int pred;
+                    if (posy == 0)
+                        pred = px_ref.l; // no row above: predict from the left pixel
+                    else if (posx == 0)
+                        pred = lineAbove[0] >>> 6; // first column: predict from the pixel above
+                    else
+                        pred = locoPredict(px_ref.l,
+                                           lineAbove[posx * channels] >>> 6,
+                                           lineAbove[(posx - 1) * channels] >>> 6);
+                    int vg = (cast(int)px.l - pred) & 1023;
 
                     if (vg < 4 || vg >= (1024 - 4)) // 3-bit signed
                     {
@@ -405,8 +431,15 @@ ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int chann
             }
             else if (decoded_pixels < num_pixels)
             {
-                int px_top = (posy > 0) ? (lineAbove[posx * channels] >>> 6) : px_ref.l;
-                int px_avg = (px_top + px_ref.l + 1) >> 1;
+                int pred;
+                if (posy == 0)
+                    pred = px_ref.l; // no row above: predict from the left pixel
+                else if (posx == 0)
+                    pred = lineAbove[0] >>> 6; // first column: predict from the pixel above
+                else
+                    pred = locoPredict(px_ref.l,
+                                       lineAbove[posx * channels] >>> 6,
+                                       lineAbove[(posx - 1) * channels] >>> 6);
 
                 decode_op:
                 ubyte op = readByte();
@@ -419,13 +452,13 @@ ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int chann
                     rewindInputBit();
                     rewindInputBit();
                     rewindInputBit();
-                    px.l = cast(ushort)((px_avg + vg) & 1023);
+                    px.l = cast(ushort)((pred + vg) & 1023);
                 }
                 else if (op < 0xc0) // QOIPLANE10_DIFF2
                 {
                     int vg = op & 0x3f;
                     vg = (vg << 26) >> 26; // sign-extend 6-bit
-                    px.l = cast(ushort)((px_avg + vg) & 1023);
+                    px.l = cast(ushort)((pred + vg) & 1023);
                 }
                 else if (op < 0xe0) // QOIPLANE10_RUN '110xxx' (6-bit)
                 {
@@ -439,13 +472,13 @@ ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int chann
                 {
                     int vg = ((op & 0x0f) << 6) | readBits(6);
                     vg = (vg << 22) >> 22; // sign-extend 10-bit
-                    px.l = cast(ushort)((px_avg + vg) & 1023);
+                    px.l = cast(ushort)((pred + vg) & 1023);
                 }
                 else if (op < 0xf8) // QOIPLANE10_DIFF3 '11110vvvvvvv' (12-bit)
                 {
                     int vg = ((op & 0x07) << 4) | readBits(4);
                     vg = (vg << 25) >> 25; // sign-extend 7-bit
-                    px.l = cast(ushort)((px_avg + vg) & 1023);
+                    px.l = cast(ushort)((pred + vg) & 1023);
                 }
                 else if (op < 0xfc) // QOIPLANE10_ADIFF '111110xx'
                 {
