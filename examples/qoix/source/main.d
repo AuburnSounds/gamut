@@ -9,6 +9,7 @@ import std.algorithm;
 import gamut;
 import core.stdc.stdlib: free;
 version(qoixStats) import gamut.codecs.qoi10b;
+version(qoixStats) import gamut.codecs.qoiplane10;
 
 void usage()
 {
@@ -43,7 +44,9 @@ int main(string[] args)
         if (image.isError)
             throw new Exception(to!string(image.errorMessage));
 
-        image.convertTo(PixelType.rgba16);
+        // Always test the 10-bit plane codec: convert to greyscale (l16/la16).
+        image.convertToGreyscale(); // -> l or la (preserves alpha if present)
+        image.convertTo16Bit();     // -> l16 or la16
         image.setLayout(LAYOUT_GAPLESS | LAYOUT_VERT_STRAIGHT);
 
         int width = image.width;
@@ -58,6 +61,7 @@ int main(string[] args)
 
         // Encode in a particular codec
         version(qoixStats) qoi10b_clear_stats();
+        version(qoixStats) qoiplane10_clear_stats();
         ubyte[] encoded;
         double encode_ms = measure( { encoded = image.saveToMemory(codec); } );
         scope(exit) freeEncodedImage(encoded);
@@ -78,19 +82,23 @@ int main(string[] args)
 
         writefln("    orig dec          decode      decode mpps   encode mpps      bit-per-pixel        size        reduction");
         writefln("  %8.2f ms      %8.2f ms       %8.2f      %8.2f           %8.5f     %9.1f kb  %9.4f", orig_decode_ms, decode_ms, decode_mpps, encode_mpps, bit_per_pixel, size_kb, size_vs_original);
+
         version(qoixStats)
         {
-            long total_ops = qois_run + qois_luma0 + qois_luma + qois_gray + qois_luma2 + qois_luma3
-                           + qois_rgb + qois_rgba + qois_adiff + qois_adiff2;
+            long total_ops = qoiplane10_run + qoiplane10_adiff + qoiplane10_diff1 + qoiplane10_diff2
+                + qoiplane10_diff3 + qoiplane10_diff4 + qoiplane10_la;
             writefln("  Opcodes (total=%d):", total_ops);
-            writefln("    run=%d  adiff=%d  adiff2=%d  rgba=%d",
-                qois_run, qois_adiff, qois_adiff2, qois_rgba);
-            writefln("    luma0=%d  luma=%d  gray=%d  luma2=%d  luma3=%d  rgb=%d",
-                qois_luma0, qois_luma, qois_gray, qois_luma2, qois_luma3, qois_rgb);
+            writefln("    run=%d  adiff=%d qoiplane10_la=%d",
+                     qoiplane10_run, qoiplane10_adiff, qoiplane10_la);
+            writefln("    diff1=%d  diff2=%d  diff3=%d  diff4=%d",
+                     qoiplane10_diff1, qoiplane10_diff2, qoiplane10_diff3, qoiplane10_diff4);
             double pct(long n) { return total_ops > 0 ? 100.0 * n / total_ops : 0.0; }
-            writefln("    %%rgb=%.1f%%  %%luma3=%.1f%%  %%luma2=%.1f%%  %%run=%.1f%%",
-                pct(qois_rgb), pct(qois_luma3), pct(qois_luma2), pct(qois_run));
+            writefln("    %%run=%.1f%%  %%diff1=%.1f%%  %%diff2=%.1f%%  %%diff3=%.1f%% %%diff4=%.1f%%",
+                     pct(qoiplane10_run), pct(qoiplane10_diff1), pct(qoiplane10_diff2), pct(qoiplane10_diff3),  pct(qoiplane10_diff4));
         }
+        
+
+
         N += 1;
 
         // To check visually if encoding is properly done.
@@ -98,8 +106,19 @@ int main(string[] args)
             Image image2;
             image2.loadFromMemory(encoded);
             assert(!image2.isError);
+
             string path = "output/" ~ baseName(f) ~ ".png";
             image2.saveToFile(path, ImageFormat.PNG);
+
+            // Idempotency round-trip check: re-encoding the decoded image must
+            // reproduce identical bytes. Catches bit-packing / predictor bugs.
+            ubyte[] encoded2 = image2.saveToMemory(codec);
+            scope(exit) freeEncodedImage(encoded2);
+            if (encoded2 is null || encoded2.length != encoded.length
+                || encoded2[] != encoded[])
+            {
+                throw new Exception("round-trip mismatch (codec not self-consistent) for " ~ to!string(f));
+            }
         }
     }
     long timeTotal = getTickUs() - timeStart;

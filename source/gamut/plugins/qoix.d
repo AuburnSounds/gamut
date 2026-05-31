@@ -22,6 +22,7 @@ version(decodeQOIX)
 {
     import gamut.codecs.qoi2avg;
     import gamut.codecs.qoiplane;
+    import gamut.codecs.qoiplane10;
     import gamut.codecs.qoi10b;
     import gamut.codecs.lz4;
 }
@@ -29,6 +30,7 @@ else version(encodeQOIX)
 {
     import gamut.codecs.qoi2avg;
     import gamut.codecs.qoi2plane;
+    import gamut.codecs.qoiplane10;
     import gamut.codecs.qoi10b;
     import gamut.codecs.lz4;
 }
@@ -252,6 +254,8 @@ ubyte* qoix_lz4_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len) 
     int qoilen;
     ubyte* qoix;
 
+    bool enable_qoiplane10_encode = false;
+
     // Choose a codec based upon input data.
     // 10-bit is always QOI-10b.
     // 8-bit with 1 or 2 channels is QOI-Plane.
@@ -259,7 +263,15 @@ ubyte* qoix_lz4_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len) 
     // All these sub-codecs have the same header format, and can be LZ4-encoded further.
     if (desc.bitdepth == 10)
     {
-        qoix = qoi10b_encode(data, desc, &qoilen);
+        if (enable_qoiplane10_encode && (desc.channels == 1 || desc.channels == 2)) // A/B: false=qoi10b, true=qoiplane10
+        {
+            // 10-bit greyscale / greyscale+alpha: dedicated plane codec.
+            qoix = qoiplane10_encode(data, desc, &qoilen);
+        }
+        else
+        {
+            qoix = qoi10b_encode(data, desc, &qoilen);
+        }
     }
     else
     {
@@ -347,6 +359,7 @@ ubyte* qoix_lz4_decode(const(ubyte)* data,
     int colorspace     = data[QOIX_HEADER_OFFSET_COLORSPACE];
     int streamChannels = data[QOIX_HEADER_OFFSET_CHANNELS];
     int streamBitdepth = data[QOIX_HEADER_OFFSET_BITDEPTH];
+    int streamVersion  = data[QOIX_HEADER_OFFSET_VERSION];
     bool premulAlpha = (colorspace == 2);
 
     // What type should it be once decompressed?
@@ -404,13 +417,26 @@ ubyte* qoix_lz4_decode(const(ubyte)* data,
     ubyte* image;
     if (streamBitdepth == 10)
     {
-        // Using qoi10b.d codec
-        decodedType = applyLoadFlags_QOI10b(streamType, flags);
-        decodedType = streamType;
-        int channels = pixelTypeNumChannels(decodedType);
+        if ((streamChannels == 1 || streamChannels == 2) && streamVersion >= 2)
+        {
+            // 10-bit greyscale / greyscale+alpha, version >= 2: dedicated plane codec.
+            // (Older version-1 1/2-channel 10-bit files were written by qoi10b and
+            //  fall through to qoi10b_decode below, preserving backward compatibility.)
+            decodedType = applyLoadFlags_QOI10b(streamType, flags);
+            decodedType = streamType;
+            int channels = pixelTypeNumChannels(decodedType);
+            image = qoiplane10_decode(uncompressedQOIX, uncompressedQOIXSize, desc, channels);
+        }
+        else
+        {
+            // Using qoi10b.d codec
+            decodedType = applyLoadFlags_QOI10b(streamType, flags);
+            decodedType = streamType;
+            int channels = pixelTypeNumChannels(decodedType);
 
-        // This codec can convert 1/2/3/4 to 1/2/3/4 channels on decode, per scanline.
-        image = qoi10b_decode(uncompressedQOIX, uncompressedQOIXSize, desc, channels);
+            // This codec can convert 1/2/3/4 to 1/2/3/4 channels on decode, per scanline.
+            image = qoi10b_decode(uncompressedQOIX, uncompressedQOIXSize, desc, channels);
+        }
     }
     else if (streamBitdepth == 8)
     {
