@@ -53,16 +53,21 @@ import gamut.codecs.qoi2avg;
 /// luma residual = px.l - avg(left, top):
 /// QOIPLANE10_DIFF1   0vvv                   ( 4b) => luma residual  -4..+3
 /// QOIPLANE10_DIFF2   10vvvvvv               ( 8b) => luma residual -32..+31
-/// QOIPLANE10_DIFF3   110vvvvvvv             (10b) => luma residual -64..+63
+/// QOIPLANE10_RUN     110xxx                 ( 6b) => repeat last pixel 1..7 (xxx==7 => + byte, 8..262)
 /// QOIPLANE10_DIFF4   1110 vvvvvvvvvv        (14b) => luma residual -512..+511 (full range)
-/// QOIPLANE10_RUN     11110xxx               ( 8b) => repeat last pixel 1..7 (xxx==7 => + byte, 8..262)
+/// QOIPLANE10_DIFF3   11110vvvvvvv           (12b) => luma residual -64..+63
 /// QOIPLANE10_ADIFF   111110 aaaaaa          (12b) => alpha residual -32..+31, then a luma opcode follows
 /// QOIPLANE10_LA      11111110 LLLLLLLLLL AAAAAAAAAA (28b) => direct full 10-bit luma + alpha
 /// QOIPLANE10_END     11111111               ( 8b) => end of stream
+///
+/// RUN takes the short `110` prefix (6 bits) because runs dominate smooth depth
+/// maps (18-50% of opcodes), while the rare DIFF3 (<2% typically) pays for it at
+/// `11110` (12 bits). DIFF1/DIFF2/DIFF4/ADIFF/LA are unchanged.
 
 static immutable ubyte[5] qoiplane10_padding = [255,255,255,255,255];
 
-enum ubyte QOIPLANE10_OP_RUN   = 0xf0; // 11110xxx
+// RUN ('110xxx') and DIFF3 ('11110vvvvvvv') are emitted/decoded by bit pattern,
+// not via a byte constant, since they are not byte-aligned.
 enum ubyte QOIPLANE10_OP_ADIFF = 0xf8; // 111110xx
 enum ubyte QOIPLANE10_OP_LA    = 0xfe; // 11111110
 enum ubyte QOIPLANE10_OP_END   = 0xff; // 11111111
@@ -92,6 +97,8 @@ version(qoixStats)
     }
 }
 
+
+enum bool enableAveragePrediction = true;
 
 /* Encode raw L16/LA16 pixels into a QOI-plane-10b image in memory.
 The function either returns null on failure or a pointer to the encoded data on
@@ -169,11 +176,11 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
         version(qoixStats) qoiplane10_run++;
         if (run < 7)
         {
-            outputByte( cast(ubyte)(QOIPLANE10_OP_RUN | run) );
+            outputBits( (0x6 << 3) | run, 6 ); // QOIPLANE10_RUN '110xxx'
         }
         else
         {
-            outputByte( cast(ubyte)(QOIPLANE10_OP_RUN | 7) );
+            outputBits( (0x6 << 3) | 7, 6 );   // '110111' escape
             outputBits(run - 7, 8);
         }
         run = 0;
@@ -192,6 +199,13 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
         for (int posx = 0; posx < desc.width; ++posx)
         {
             px_ref = px;
+
+            /*
+            if (posy > 0 && enableAveragePrediction) 
+            {
+                px_ref.l = (px_ref.l + lastDecodedScanline[posx].l + 1) >> 1;
+                px_ref.a = (px_ref.a + lastDecodedScanline[posx].a + 1) >> 1;
+            } */
 
             // take next pixel to encode, reduce 16-bit -> 10-bit
             if (channels == 1)
@@ -255,7 +269,7 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
                     else if (vg < 64 || vg >= (1024 - 64)) // 7-bit signed
                     {
                         version(qoixStats) qoiplane10_diff3++;
-                        outputBits((0x6 << 7) | (vg & 0x7f), 10); // QOIPLANE10_DIFF3 '110vvvvvvv'
+                        outputBits((0x1e << 7) | (vg & 0x7f), 12); // QOIPLANE10_DIFF3 '11110vvvvvvv'
                     }
                     else
                     {
@@ -413,11 +427,13 @@ ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int chann
                     vg = (vg << 26) >> 26; // sign-extend 6-bit
                     px.l = cast(ushort)((px_avg + vg) & 1023);
                 }
-                else if (op < 0xe0) // QOIPLANE10_DIFF3
+                else if (op < 0xe0) // QOIPLANE10_RUN '110xxx' (6-bit)
                 {
-                    int vg = ((op & 0x1f) << 2) | read2Bits();
-                    vg = (vg << 25) >> 25; // sign-extend 7-bit
-                    px.l = cast(ushort)((px_avg + vg) & 1023);
+                    run = (op >> 2) & 7;
+                    rewindInputBit(); // 6-bit opcode: rewind the 2 over-read bits
+                    rewindInputBit();
+                    if (run == 7)
+                        run = readBits(8) + 7;
                 }
                 else if (op < 0xf0) // QOIPLANE10_DIFF4 (full range)
                 {
@@ -425,11 +441,11 @@ ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int chann
                     vg = (vg << 22) >> 22; // sign-extend 10-bit
                     px.l = cast(ushort)((px_avg + vg) & 1023);
                 }
-                else if (op < 0xf8) // QOIPLANE10_RUN
+                else if (op < 0xf8) // QOIPLANE10_DIFF3 '11110vvvvvvv' (12-bit)
                 {
-                    run = op & 7;
-                    if (run == 7)
-                        run = readBits(8) + 7;
+                    int vg = ((op & 0x07) << 4) | readBits(4);
+                    vg = (vg << 25) >> 25; // sign-extend 7-bit
+                    px.l = cast(ushort)((px_avg + vg) & 1023);
                 }
                 else if (op < 0xfc) // QOIPLANE10_ADIFF '111110xx'
                 {
