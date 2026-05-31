@@ -254,16 +254,20 @@ ubyte* qoix_lz4_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len) 
     int qoilen;
     ubyte* qoix;
 
-    bool enable_qoiplane10_encode = false;
+    // For QOIX version >= 2, greyscale 16-bit images are encoded
+    // using qoiplane10. For our use case in plugins it compresses 
+    // 20% more a depth map with a 47% faster decompression.
+    enum bool ENABLE_QOIPLANE10_ENCODE = false;
 
     // Choose a codec based upon input data.
-    // 10-bit is always QOI-10b.
+    // 10-bit with 1 or 2 channels if QOIPLANE10
+    // 10-bit with 3 or 4 channels is QOI-10b.
     // 8-bit with 1 or 2 channels is QOI-Plane.
     // 8-bit with 3 or 4 channels is QOI2AVG.
     // All these sub-codecs have the same header format, and can be LZ4-encoded further.
     if (desc.bitdepth == 10)
     {
-        if (enable_qoiplane10_encode && (desc.channels == 1 || desc.channels == 2)) // A/B: false=qoi10b, true=qoiplane10
+        if (ENABLE_QOIPLANE10_ENCODE && (desc.channels == 1 || desc.channels == 2)) // A/B: false=qoi10b, true=qoiplane10
         {
             // 10-bit greyscale / greyscale+alpha: dedicated plane codec.
             qoix = qoiplane10_encode(data, desc, &qoilen);

@@ -167,6 +167,12 @@ ubyte* qoi10b_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
     // 2 = improved QOI-10b (new prediction)
     ubyte qoix_version = 1;
 
+    // Note that you cannot encode or decode l16 and la16 images
+    // with version >= 2, it becomes a RGB only codec much like
+    // original QOI.
+    if ((desc.channels == 1 || desc.channels == 2) && qoix_version >= 2)
+        assert(false);
+
     // Encoding is disabled for now.
     // As for decode, decoding v1 QOI-10b should be supported.
 

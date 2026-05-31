@@ -12,8 +12,8 @@ import gamut.codecs.qoi2avg;
 /// MED predictor over the left/top/topleft neighbours (same predictor that won in
 /// qoi10b v2) and encodes the residual; alpha is predicted from the left only. It is
 /// 2-bit aligned (like qoi10b) rather than nibble aligned, which lets the common
-/// small residual use a single tag bit (6 bits total for +/-16, same as qoi10b's
-/// grey LUMA), while adding tiers qoi10b lacks or wastes in greyscale.
+/// tiny residual use a 4-bit DIFF1 (1 tag bit + 3 value bits, +/-4) while keeping
+/// the larger tiers cheap; a length-1 run is emitted as a DIFF1 when that is smaller.
 ///
 /// Input is 16-bit ushort, but only the top 10 bits are encoded, so this is
 /// lossy if the input truly has more than 10 bits of precision (same contract
@@ -51,7 +51,7 @@ import gamut.codecs.qoi2avg;
 /// Values are 0..1023. The bitstream is 2-bit aligned (every opcode is an even
 /// number of bits). All values have the most significant bit on the left.
 ///
-/// luma residual = px.l - avg(left, top):
+/// luma residual = px.l - pred, where pred is the LOCO-I / MED prediction:
 /// QOIPLANE10_DIFF1   0vvv                   ( 4b) => luma residual  -4..+3
 /// QOIPLANE10_DIFF2   10vvvvvv               ( 8b) => luma residual -32..+31
 /// QOIPLANE10_RUN     110xxx                 ( 6b) => repeat last pixel 1..7 (xxx==7 => + byte, 8..262)
@@ -99,8 +99,6 @@ version(qoixStats)
 }
 
 
-enum bool enableAveragePrediction = true;
-
 // Scalar LOCO-I / JPEG-LS MED (median edge detector) predictor, on 10-bit luma.
 //   left = decoded pixel to the left, top = pixel above, topleft = pixel above-left.
 // This is the de-SIMD'd form of qoi10b's locoIntraPredictionSIMD (which runs it on
@@ -126,6 +124,7 @@ version(encodeQOIX)
 ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
 {
     if ( (desc.channels != 1 && desc.channels != 2) ||
+        desc.width == 0 || desc.height == 0 ||
         desc.height >= QOIX_PIXELS_MAX / desc.width ||
           desc.compression != QOIX_COMPRESSION_NONE
     ) {
