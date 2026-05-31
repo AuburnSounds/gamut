@@ -257,10 +257,10 @@ ubyte* qoix_lz4_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len) 
     // For QOIX version >= 2, greyscale 16-bit images are encoded
     // using qoiplane10. For our use case in plugins it compresses 
     // 20% more a depth map with a 47% faster decompression.
-    enum bool ENABLE_QOIPLANE10_ENCODE = false;
+    enum bool ENABLE_QOIPLANE10_ENCODE = true;
 
     // Choose a codec based upon input data.
-    // 10-bit with 1 or 2 channels if QOIPLANE10
+    // 10-bit with 1 or 2 channels if QOI-Plane10.
     // 10-bit with 3 or 4 channels is QOI-10b.
     // 8-bit with 1 or 2 channels is QOI-Plane.
     // 8-bit with 3 or 4 channels is QOI2AVG.
@@ -426,7 +426,7 @@ ubyte* qoix_lz4_decode(const(ubyte)* data,
             // 10-bit greyscale / greyscale+alpha, version >= 2: dedicated plane codec.
             // (Older version-1 1/2-channel 10-bit files were written by qoi10b and
             //  fall through to qoi10b_decode below, preserving backward compatibility.)
-            decodedType = applyLoadFlags_QOI10b(streamType, flags);
+            decodedType = applyLoadFlags_QOIPlane10(streamType, flags);
             decodedType = streamType;
             int channels = pixelTypeNumChannels(decodedType);
             image = qoiplane10_decode(uncompressedQOIX, uncompressedQOIXSize, desc, channels);
@@ -554,5 +554,13 @@ PixelType applyLoadFlags_QOI10b(PixelType type, LoadFlags flags)
         if (flags & LOAD_NO_ALPHA)
             type = convertPixelTypeToDropAlphaChannel(type);
     }
+    return type;
+}
+
+// Given those load flags, what is the best effort the decoder can do?
+PixelType applyLoadFlags_QOIPlane10(PixelType type, LoadFlags flags)
+{
+    // PERF: it's not sure whether QOI-Plane10 can convert formats on
+    // load. But it can probably do 1->2 and 2->1, haven't tested it yet.
     return type;
 }

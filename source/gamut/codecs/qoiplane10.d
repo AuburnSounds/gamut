@@ -8,18 +8,7 @@ import core.stdc.string: memset;
 import gamut.codecs.qoi2avg;
 
 /// A QOI-inspired codec for 10-bit greyscale (and greyscale + alpha) images,
-/// called "QOI-plane-10b". It predicts each luma sample with the LOCO-I / JPEG-LS
-/// MED predictor over the left/top/topleft neighbours (same predictor that won in
-/// qoi10b v2) and encodes the residual; alpha is predicted from the left only. It is
-/// 2-bit aligned (like qoi10b) rather than nibble aligned, which lets the common
-/// tiny residual use a 4-bit DIFF1 (1 tag bit + 3 value bits, +/-4) while keeping
-/// the larger tiers cheap; a length-1 run is emitted as a DIFF1 when that is smaller.
-///
-/// Input is 16-bit ushort, but only the top 10 bits are encoded, so this is
-/// lossy if the input truly has more than 10 bits of precision (same contract
-/// as qoi10b). The use case is 10-bit single-plane data such as Dplug PBR
-/// elevation/depth maps, where the 4-channel qoi10b path wastes 6-8 bits per
-/// pixel on the always-zero chroma residual.
+/// called "QOI-Plane10".
 ///
 /// Incompatible adaptation of QOI format - https://phoboslab.org
 ///
@@ -42,9 +31,9 @@ import gamut.codecs.qoi2avg;
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 /// SOFTWARE.
 ///
-/// A QOI-plane-10b file has the standard 25-byte QOIX header. It is distinguished
-/// from a qoi10b stream (which can also carry 1/2 channels) by:
-///   - bitdepth == 10  AND  channels == 1 or 2  AND  version_ >= 2.
+/// A QOI-Plane10 file has the standard 25-byte QOIX header. It is distinguished
+/// from a QOI-10b stream (which can also carry 1/2 channels) by:
+///   - (bitdepth == 10)  AND  (channels == 1 or 2)  AND  (version_ >= 2).
 /// Older 1/2-channel 10-bit files written by qoi10b use version_ == 1 and keep
 /// decoding on qoi10b; the plugin routes on this.
 ///
@@ -61,14 +50,8 @@ import gamut.codecs.qoi2avg;
 /// QOIPLANE10_LA      11111110 LLLLLLLLLL AAAAAAAAAA (28b) => direct full 10-bit luma + alpha
 /// QOIPLANE10_END     11111111               ( 8b) => end of stream
 ///
-/// RUN takes the short `110` prefix (6 bits) because runs dominate smooth depth
-/// maps (18-50% of opcodes), while the rare DIFF3 (<2% typically) pays for it at
-/// `11110` (12 bits). DIFF1/DIFF2/DIFF4/ADIFF/LA are unchanged.
-
 static immutable ubyte[5] qoiplane10_padding = [255,255,255,255,255];
 
-// RUN ('110xxx') and DIFF3 ('11110vvvvvvv') are emitted/decoded by bit pattern,
-// not via a byte constant, since they are not byte-aligned.
 enum ubyte QOIPLANE10_OP_ADIFF = 0xf8; // 111110xx
 enum ubyte QOIPLANE10_OP_LA    = 0xfe; // 11111110
 enum ubyte QOIPLANE10_OP_END   = 0xff; // 11111111
@@ -77,8 +60,8 @@ enum qoi_la10_t initialPredictor = { l:0, a:1023 };
 
 struct qoi_la10_t
 {
-    ushort l; // 0..1023
-    ushort a; // 0..1023
+    ushort l;
+    ushort a;
 }
 
 
@@ -98,12 +81,7 @@ version(qoixStats)
     }
 }
 
-
-// Scalar LOCO-I / JPEG-LS MED (median edge detector) predictor, on 10-bit luma.
-//   left = decoded pixel to the left, top = pixel above, topleft = pixel above-left.
-// This is the de-SIMD'd form of qoi10b's locoIntraPredictionSIMD (which runs it on
-// RGBA lanes); here we only need the luma lane. Same predictor that won in qoi10b.
-static int locoPredict(int left, int top, int topleft) nothrow @nogc
+int locoPredict(int left, int top, int topleft) nothrow @nogc
 {
     int max_ab = left > top ? left : top;
     int min_ab = left < top ? left : top;
@@ -117,9 +95,6 @@ static int locoPredict(int left, int top, int topleft) nothrow @nogc
     return d;
 }
 
-/* Encode raw L16/LA16 pixels into a QOI-plane-10b image in memory.
-The function either returns null on failure or a pointer to the encoded data on
-success; out_len is set to the encoded size in bytes. free() after use. */
 version(encodeQOIX)
 ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len)
 {
@@ -150,7 +125,7 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
     qoi_write_32(bytes, &p, QOIX_MAGIC);
     qoi_write_32(bytes, &p, desc.width);
     qoi_write_32(bytes, &p, desc.height);
-    bytes[p++] = 2; // version_ == 2 marks QOI-plane-10b (vs qoi10b 1/2-ch which is version 1)
+    bytes[p++] = 2; // 1 would signal QOI-10b instead
     bytes[p++] = desc.channels; // 1 or 2
     bytes[p++] = desc.bitdepth; // 10
     bytes[p++] = desc.colorspace;
@@ -206,19 +181,16 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
         run = 0;
     }
 
-    // Flush the pending run. A length-1 run encodes the same pixel as a DIFF1
-    // (4 bits) whenever its residual against the predictor fits +/-4 — cheaper
-    // than RUN (6 bits). The decoder is agnostic: it reconstructs px.l = pred+vg
-    // = px_ref.l and leaves alpha = px_ref.a either way.
     void flushRun() nothrow @nogc
     {
         if (run == 1)
         {
+            // Is DIFF1 smaller?
             int vg = (run1_val - run1_pred) & 1023;
-            if (vg < 4 || vg >= (1024 - 4)) // fits DIFF1 better
+            if (vg < 4 || vg >= (1024 - 4))
             {
                 version(qoixStats) qoiplane10_diff1++;
-                outputBits(vg & 0x07, 4); // QOIPLANE10_DIFF1  '0vvv'
+                outputBits(vg & 0x07, 4); // QOIPLANE10_DIFF1
                 run = 0;
                 return;
             }
@@ -303,25 +275,25 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
                 {
                     int vg = (cast(int)px.l - pred) & 1023;
 
-                    if (vg < 4 || vg >= (1024 - 4)) // 3-bit signed
+                    if (vg < 4 || vg >= (1024 - 4))
                     {
                         version(qoixStats) qoiplane10_diff1++;
-                        outputBits(vg & 0x07, 4); // QOIPLANE10_DIFF1  '0vvv'
+                        outputBits(vg & 0x07, 4); // QOIPLANE10_DIFF1
                     }
-                    else if (vg < 32 || vg >= (1024 - 32)) // 6-bit signed
+                    else if (vg < 32 || vg >= (1024 - 32))
                     {
                         version(qoixStats) qoiplane10_diff2++;
-                        outputBits(0x80 | (vg & 0x3f), 8); // QOIPLANE10_DIFF2 '10vvvvvv'
+                        outputBits(0x80 | (vg & 0x3f), 8); // QOIPLANE10_DIFF2
                     }
-                    else if (vg < 64 || vg >= (1024 - 64)) // 7-bit signed
+                    else if (vg < 64 || vg >= (1024 - 64)) 
                     {
                         version(qoixStats) qoiplane10_diff3++;
-                        outputBits((0x1e << 7) | (vg & 0x7f), 12); // QOIPLANE10_DIFF3 '11110vvvvvvv'
+                        outputBits((0x1e << 7) | (vg & 0x7f), 12); // QOIPLANE10_DIFF3
                     }
                     else
                     {
                         version(qoixStats) qoiplane10_diff4++;
-                        outputBits((0xe << 10) | (vg & 0x3ff), 14); // QOIPLANE10_DIFF4 '1110' + 10b (full range)
+                        outputBits((0xe << 10) | (vg & 0x3ff), 14); // QOIPLANE10_DIFF4
                     }
                 }
             }
@@ -341,8 +313,6 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
     return bytes;
 }
 
-/* Decode a QOI-plane-10b image from memory. Returns null on failure or a pointer
-to the decoded 16-bit pixels; desc is filled from the header. free() after use. */
 version(decodeQOIX)
 ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int channels)
 {
@@ -439,6 +409,7 @@ ubyte* qoiplane10_decode(const(ubyte)* data, int size, qoi_desc *desc, int chann
     for (int posy = 0; posy < desc.height; ++posy)
     {
         ushort* line = cast(ushort*)(pixels + desc.pitchBytes * posy);
+        
         // Only read .l from the line above (alpha may be absent when decoding 2ch->1ch).
         const(ushort)* lineAbove = (posy > 0) ? cast(const(ushort)*)(pixels + desc.pitchBytes * (posy - 1)) : null;
 

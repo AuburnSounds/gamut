@@ -36,6 +36,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 
 ## Changelog
 
+- **v3.4** QOIX encoder has a new "QOIPlane10" codec, specifically for 10-bit greyscale images with optional alpha. Nothing to do, such images encoded as QOI-10b will continue to decode. Use newer `convert` to get 50% faster decodes and 20% bitrate reduction for greyscale 10-bit images.
 - **v3.3** Added [SQZ](https://github.com/MarcioPais/SQZ) input and output. A MIT-licensed codec that beat guetzli-encoded JPEG by about 30%! It also encodes faster, but decodes 2x slower than baseline JPEG. Quality comparisons [here](https://encode.su/threads/4183-SQZ-Low-complexity-scalable-lossless-and-lossy-image-compression-library).
 - **v3** Added premultiplied alpha pixel types. **BREAKING**.
     * Decoders are now allowed to return any type if you do not specify `LOAD_PREMUL` or `LOAD_NO_PREMUL`.
@@ -67,7 +68,7 @@ Our benchmark results for 8-bit color images:
   * because it's based upon better intra predictors
   * because it is followed by LZ4, which removes some of the QOI worst cases.
 - QOIX adds support for 8-bit greyscale and greyscale + alpha images, with a "QOI-plane" custom codec.
-- QOIX adds support for 10-bit images, with a "QOI-10b" custom codec. It drops the last 6 bits of precision (lossy) to outperform PNG 16-bit in every way for some use cases.
+- QOIX adds support for 10-bit images, with "QOI-Plane10" and QOI-10b" custom codec. They drop the last 6 bits of precision (lossy) to outperform PNG 16-bit in every way for some use cases. QOIX is smaller and loads faster than PNG.
 - QOIX support for premultiplied alpha brings even more speed and compression for transparent images.
 
 Use the `convert` tool to encode QOIX.
