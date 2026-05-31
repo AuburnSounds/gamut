@@ -187,6 +187,8 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
     }
 
     int run = 0;
+    int run1_pred = 0; // predictor + value of the run's first pixel, so a length-1
+    int run1_val = 0;  // run can be re-encoded as DIFF1 when that is cheaper (4b vs 6b)
 
     void encodeRun() nothrow @nogc
     {
@@ -205,6 +207,26 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
         run = 0;
     }
 
+    // Flush the pending run. A length-1 run encodes the same pixel as a DIFF1
+    // (4 bits) whenever its residual against the predictor fits +/-4 — cheaper
+    // than RUN (6 bits). The decoder is agnostic: it reconstructs px.l = pred+vg
+    // = px_ref.l and leaves alpha = px_ref.a either way.
+    void flushRun() nothrow @nogc
+    {
+        if (run == 1)
+        {
+            int vg = (run1_val - run1_pred) & 1023;
+            if (vg < 4 || vg >= (1024 - 4)) // fits DIFF1 better
+            {
+                version(qoixStats) qoiplane10_diff1++;
+                outputBits(vg & 0x07, 4); // QOIPLANE10_DIFF1  '0vvv'
+                run = 0;
+                return;
+            }
+        }
+        encodeRun();
+    }
+
     qoi_la10_t px = initialPredictor;
     qoi_la10_t px_ref = initialPredictor;
 
@@ -219,13 +241,6 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
         {
             px_ref = px;
 
-            /*
-            if (posy > 0 && enableAveragePrediction) 
-            {
-                px_ref.l = (px_ref.l + lastDecodedScanline[posx].l + 1) >> 1;
-                px_ref.a = (px_ref.a + lastDecodedScanline[posx].a + 1) >> 1;
-            } */
-
             // take next pixel to encode, reduce 16-bit -> 10-bit
             if (channels == 1)
             {
@@ -237,16 +252,33 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
                 px.a = cast(ushort)(line[posx * 2 + 1] >>> 6);
             }
 
+            // LOCO-I / MED prediction of luma from left/top/topleft (computed for
+            // every pixel so a length-1 run can fall back to DIFF1 at flush time).
+            int pred;
+            if (posy == 0)
+                pred = px_ref.l; // no row above: predict from the left pixel
+            else if (posx == 0)
+                pred = lineAbove[0] >>> 6; // first column: predict from the pixel above
+            else
+                pred = locoPredict(px_ref.l,
+                                   lineAbove[posx * channels] >>> 6,
+                                   lineAbove[(posx - 1) * channels] >>> 6);
+
             if (px == px_ref)
             {
+                if (run == 0)
+                {
+                    run1_pred = pred;  // remember the first run pixel in case the
+                    run1_val  = px.l;  // run turns out to be length 1
+                }
                 run++;
                 if (run == 256 || (pixels_encoded + 1 == num_pixels))
-                    encodeRun();
+                    flushRun();
             }
             else
             {
                 if (run > 0)
-                    encodeRun();
+                    flushRun();
 
                 bool encoded = false;
                 int va = (cast(int)px.a - cast(int)px_ref.a) & 1023;
@@ -270,16 +302,6 @@ ubyte* qoiplane10_encode(const(ubyte)* data, const(qoi_desc)* desc, int *out_len
 
                 if (!encoded)
                 {
-                    // luma residual vs LOCO-I prediction of left/top/topleft
-                    int pred;
-                    if (posy == 0)
-                        pred = px_ref.l; // no row above: predict from the left pixel
-                    else if (posx == 0)
-                        pred = lineAbove[0] >>> 6; // first column: predict from the pixel above
-                    else
-                        pred = locoPredict(px_ref.l,
-                                           lineAbove[posx * channels] >>> 6,
-                                           lineAbove[(posx - 1) * channels] >>> 6);
                     int vg = (cast(int)px.l - pred) & 1023;
 
                     if (vg < 4 || vg >= (1024 - 4)) // 3-bit signed
