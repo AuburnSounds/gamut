@@ -9,6 +9,8 @@
         "miniz": ">=0.0.0 <2.0.0"
     },
 
+    "buildRequirements": ["allowWarnings"],
+
     "configurations": [
         {
             "name": "boost+mit",
