@@ -263,8 +263,7 @@ bool layoutConstraintsCompatible(LayoutConstraints newer, LayoutConstraints olde
     return true; // is compatible
 }
 
-/// _Assuming the same `PixelType`, can an allocation made with constraint `older` 
-/// be used with constraint `newer`?
+/// Are those layout constraints internally consistent?
 bool layoutConstraintsValid(LayoutConstraints constraints) pure
 {
     bool forceVFlipped    = (constraints & LAYOUT_VERT_FLIPPED) != 0;

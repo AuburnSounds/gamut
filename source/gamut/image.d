@@ -683,16 +683,16 @@ public:
     /// No layout constraints are assumed.
     /// The input scanlines must NOT overlap. MAYDO: take const as runtime flag?
     /// Params:
-    ///    data             Pointer to first scanline pixels.
-    ///    layers           Number of layers.
-    ///    width            Width of input data in pixels.
-    ///    height           Height of input data in pixels.
-    ///    type             Type of pixels for the created view.
-    ///    pitchInBytes     Byte offset between two consecutive rows of pixels.
-    ///                     Can not be too small as the scanline would overlap, in this case the 
-    ///                     image will be left in an errored state.
-    ///    layerOffsetBytes Byte offset between two consecutive layers. Can not be negative.
-    ///                     for layers == 0 or layers == 1, this is ignored and 0 is set instead.  
+    ///    data             = Pointer to first scanline pixels.
+    ///    layers           = Number of layers.
+    ///    width            = Width of input data in pixels.
+    ///    height           = Height of input data in pixels.
+    ///    type             = Type of pixels for the created view.
+    ///    pitchInBytes     = Byte offset between two consecutive rows of pixels.
+    ///                       Can not be too small as the scanline would overlap, in this case the 
+    ///                       image will be left in an errored state.
+    ///    layerOffsetBytes = Byte offset between two consecutive layers. Can not be negative.
+    ///                       for layers == 0 or layers == 1, this is ignored and 0 is set instead.  
     /// Tags: none.
     void createView(void* data, 
                     int width, 
@@ -876,8 +876,8 @@ public:
     /// Load an image from a memory location.
     ///
     /// Params:
-    ///    bytes Arrays containing the encoded image to decode.
-    ///    flags Flags can contain LOAD_xxx flags and LAYOUT_xxx flags.
+    ///    bytes = Arrays containing the encoded image to decode.
+    ///    flags = Flags can contain LOAD_xxx flags and LAYOUT_xxx flags.
     ///
     /// Returns: `true` if successfull. The image will be in errored state if there is a problem.
     ///
