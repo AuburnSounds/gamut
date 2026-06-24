@@ -47,8 +47,7 @@ nothrow @nogc:
 
 private import core.stdc.stdlib;
 private import core.stdc.string;
-private import std.system;
-private import std.bitmanip;
+import core.bitop: bsf;
 private import gamut.codecs.ctypes;
 
 /// Version constants
@@ -202,7 +201,6 @@ private void LZ4_wildCopy(void* dstPtr, const(void)* srcPtr, void* dstEnd)
 
 public uint LZ4_NbCommonBytes (size_t val)
 {
-    import core.bitop: bsf;
     assert(val != 0);
     return bsf(val) >> 3;
 }

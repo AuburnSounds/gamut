@@ -42,10 +42,10 @@ extern(C) @system
     ///  callers must use feof() and ferror() to determine which
     ///  occurred. (well, ferror not available in gamut).
     ///
-    /// Params:
     ///    buffer = Where to read. Must be able to hold `size` * `count` bytes.
     ///    size   = Size of elements to read in stream.
     ///    count  = Number of elements to read in stream.
+    ///    handle = IO handle.
     ///
     /// Returns: 
     ///    Number of item successfully read. If return value != `count`, there was an error.

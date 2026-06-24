@@ -5,7 +5,6 @@ module gamut.codecs.ctypes;
 
 private import core.stdc.stdlib;
 private import core.stdc.string;
-private import std.exception;
 
 alias ALLOCATOR = calloc;
 alias FREEMEM = free;
