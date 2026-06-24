@@ -18,7 +18,7 @@ import core.stdc.stdint: SIZE_MAX, uintptr_t;
 import core.stdc.stdio: snprintf;
 import core.stdc.stdlib: free, malloc, realloc, calloc, qsort;
 import core.stdc.string: memset, memcpy, memcmp, memmove;
-import core.stdc.math: isfinite, fabs, ldexpf, powf, hypotf, fabsf, cbrtf;
+import core.stdc.math: fabs, ldexpf, powf, hypotf, fabsf, cbrtf;
 import core.bitop: bsr;
 import inteli.emmintrin: _mm_malloc, _mm_free;
 
@@ -402,7 +402,14 @@ float j40__maxf(float x, float y) { return (x > y ? x : y); }
 // used to guard against division by zero
 int j40__surely_nonzero(float x) 
 {
-    return isfinite(x) && fabs(x) >= 1e-8f;
+    return j40_isfinite(x) && fabs(x) >= 1e-8f;
+}
+
+bool j40_isfinite(float x) pure @trusted
+{
+    uint u = *cast(uint*)(&x);
+    bool result = (u & 0x7fffffff) < 0x7f800000;
+    return result;
 }
 
 // Scan for most significant set bit.
