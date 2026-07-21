@@ -11,6 +11,6 @@
 
     "subConfigurations":
     {
-        "gamut": "boost+mit"
+        "gamut": "boost+mit+bsd3"
     }
 }

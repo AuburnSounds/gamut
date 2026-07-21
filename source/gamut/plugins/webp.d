@@ -21,7 +21,7 @@ version(decodeWEBP) import gamut.codecs.tiny_webp;
 ImageFormatPlugin makeWEBPPlugin()
 {
     ImageFormatPlugin p;
-    p.format = "JPEG XL";
+    p.format = "WebP";
     p.extensionList = "webp";
     p.mimeTypes = "image/webp";
     version(decodeWEBP)
@@ -79,11 +79,44 @@ void loadWEBP(ref Image image, IOStream *io, IOHandle handle, int page, int flag
     // MAYDO: support twp_FLAG_SKIP_LOOP_FILTER, supposedly faster
     // decoding for worse quality.
 
-    // PERF: use twp_FORMAT_RGB if allowed by flags
-
     int decflags = 0;
     int width, height;
-    ubyte* decoded = twp_read_from_memory(buf, len, &width, &height, twp_FORMAT_RGBA, decflags);
+
+    int format;
+    int chans;
+    if (requestedComp == -1) // auto
+    {
+        // fallback
+        format = twp_FORMAT_RGBA; // TODO: parse beginning to see if alpha channel is needed
+        chans = 4;
+        if (len >= 30)
+        {
+            // Parse format from stream, to avoid decoding to rgba8 when rgb8 could have sufficed.
+            int w, h, lossless, alpha;
+            int res = twp_get_info_from_memory(buf, 30, &w, &h, &lossless, &alpha);
+            if (res == 1)
+            {
+                format = alpha ? twp_FORMAT_RGBA : twp_FORMAT_RGBA;
+                chans = alpha ? 4 : 3;
+            }
+        }       
+    }
+    else if (requestedComp == 1 || requestedComp == 3)
+    {
+        format = twp_FORMAT_RGB;
+        chans  = 3;
+    }
+    else
+    {
+        assert(requestedComp == 2 || requestedComp == 4);
+        format = twp_FORMAT_RGBA;
+        chans  = 4;
+    }
+
+    //import core.stdc.stdio;
+    //printf("requestedComp = %d\n", requestedComp);
+
+    ubyte* decoded = twp_read_from_memory(buf, len, &width, &height, format, decflags);
 
     if (decoded == null)
     {
@@ -95,10 +128,12 @@ void loadWEBP(ref Image image, IOStream *io, IOHandle handle, int page, int flag
     image._data      = decoded;
     image._width     = width;
     image._height    = height;
-    image._type      = PixelType.rgba8;
-    image._pitch     = 4 * width;
+    image._type      = (format == twp_FORMAT_RGBA) ? PixelType.rgba8 : PixelType.rgb8;
+    //import core.stdc.stdio;
+    //printf("type = %d\n", format);
+    image._pitch     = chans * width;
     image._pixelAspectRatio = GAMUT_UNKNOWN_ASPECT_RATIO;
-    image._resolutionY = GAMUT_UNKNOWN_RESOLUTION;
+    image._resolutionY      = GAMUT_UNKNOWN_RESOLUTION;
     image._layoutConstraints = 0; // no particular constraint followed in QOI decoder.
     image._layerCount = 1;
     image._layerOffset = 0;

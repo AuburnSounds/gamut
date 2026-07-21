@@ -12,6 +12,12 @@
     "buildRequirements": ["allowWarnings"],
 
     "configurations": [
+
+        {
+            "name": "boost+mit+bsd3",
+            "versions": [ "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX",              "decodeTGA", "decodeGIF", "decodeBMP", "decodeJXL", "decodeSQZ", "decodeWEBP",
+                          "encodeJPEG", "encodePNG", "encodeQOI", "encodeQOIX", "encodeDDS", "encodeTGA", "encodeGIF", "encodeBMP"             , "encodeSQZ"               ]
+        },
         {
             "name": "boost+mit",
             "versions": [ "decodeJPEG", "decodePNG", "decodeQOI", "decodeQOIX",              "decodeTGA", "decodeGIF", "decodeBMP", "decodeJXL", "decodeSQZ",

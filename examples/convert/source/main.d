@@ -22,6 +22,7 @@ void usage()
     writeln("  -b/--bitness Change bitness of file");
     writeln("  -p/--premul  Encode with premultiplied alpha (if any alpha)");
     writeln("  --unpremul   Encode with unpremultiplied alpha");
+    writeln("  --time       Show decoding and encoding timings.");
     writeln("  -h           Shows this help");
     writeln;
 }
@@ -30,8 +31,11 @@ int main(string[] args)
 {
     try
     {
+        enableConsoleUTF8();
+
         string input = null;
         string output = null;
+        bool time = false;
         bool help = false;
         bool premul = false;
         bool unpremul = false;
@@ -84,6 +88,10 @@ int main(string[] args)
             {
                 forceNoAlpha = true;
             }
+            else if (arg == "--time")
+            {
+                time = true;
+            }
             else if (arg == "-f" || arg == "--flag")
             {
                 ++i;
@@ -118,7 +126,9 @@ int main(string[] args)
         Image image;
         Image* result = &image;
 
-        image.loadFromFile(input, LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
+        long timeDecodeBefore = getTickUs();
+        image.loadFromFile(input, LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS | LOAD_RGB | LOAD_NO_ALPHA);
+        long timeDecodeAfter  = getTickUs();
 
         if (image.isError)
         {
@@ -145,7 +155,9 @@ int main(string[] args)
         if (premul) image.premultiply();
         if (unpremul) image.unpremultiply();
 
+        long timeEncodeBefore = getTickUs();
         bool r = result.saveToFile(output, encodeFlags);
+        long timeEncodeAfter = getTickUs();
         if (!r)
         {
             throw new Exception("Couldn't save file " ~ output);
@@ -162,9 +174,26 @@ int main(string[] args)
                 return format("%4s MB", bytes / (1024*1024));
         }
 
+        string prettyTime(long usecs)
+        {
+            double ms = usecs / 1000.0;
+            return format("%5.3s ms", ms);
+        }
+
         cwritef("<lcyan>%20s (<yellow>%s</yellow>)</lcyan>", input, fileSize(input));
-        cwritef(" encoded to ");
+        cwritef(" ➡ ");
         cwritef("<lgreen>%20s (<yellow>%s</yellow>, %s)</lgreen>\n", output, fileSize(output), image.type);
+
+        if (time)
+        {
+            string declabel = "decode:";
+            string enclabel = "encode:";
+            cwritef("<cyan>%20s</> <orange>%s</>    <green>%20s</> <orange>%s</>", 
+                    declabel,
+                    prettyTime(timeDecodeAfter - timeDecodeBefore),
+                    enclabel,
+                    prettyTime(timeEncodeAfter - timeEncodeBefore));
+        }
 
         return 0;
     }
@@ -233,4 +262,9 @@ int[string] buildEncodeFlags()
     ];
     return flags;
 }
-      
+
+long getTickUs() nothrow @nogc
+{
+    import core.time;
+    return convClockFreq(MonoTime.currTime.ticks, MonoTime.ticksPerSecond, 1_000_000);
+}
