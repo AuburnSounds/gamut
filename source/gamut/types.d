@@ -24,7 +24,8 @@ enum ImageFormat
     GIF     =  6, /// Graphics Interchange Format
     BMP     =  7, /// Windows or OS/2 Bitmap File (*.BMP)
     JXL     =  8, /// JPEG XL Image Coding System (ISO/IEC 18181)
-    SQZ     =  9, /// SQZ Low complexity, scalable lossless and lossy image https://github.com/MarcioPais/SQZ (*.sqz)
+    SQZ     =  9, /// SQZ Low complexity, scalable lossless and lossy image https://github.com/MarcioPais/SQZ (*.SQZ)
+    WEBP    = 10, /// WebP image, based upon VP8 intra (*.WEBP)
 }
 
 /// Pixel component type.
@@ -262,6 +263,7 @@ enum int ENCODE_SQZ_QUALITY_DEFAULT = 0,         // Not 0 bpp, it defaults to 2.
          ENCODE_SQZ_QUALITY_BPP3_5  = 0x70 << 5, // Budget = 3.5  bpp
          ENCODE_SQZ_QUALITY_BPP3_75 = 0x78 << 5, // Budget = 3.75 bpp
          ENCODE_SQZ_QUALITY_MAX     = 0xff << 5; // Considering this is ~8 bpp this should be lossless
+
 
 /// Layout constraints flags (bits 0 to 15).
 /// All of those introduce "gap pixels" after the scanline, in order to follow the various constraints.

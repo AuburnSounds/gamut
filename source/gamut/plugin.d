@@ -21,6 +21,7 @@ import gamut.plugins.gif;
 import gamut.plugins.bmp;
 import gamut.plugins.jxl;
 import gamut.plugins.sqz;
+import gamut.plugins.webp;
 
 nothrow @nogc @safe:
 
@@ -120,4 +121,5 @@ static immutable __gshared ImageFormatPlugin[ImageFormat.max+1] g_plugins =
     makeBMPPlugin(),
     makeJXLPlugin(),
     makeSQZPlugin(),
+    makeWEBPPlugin(),
 ];
