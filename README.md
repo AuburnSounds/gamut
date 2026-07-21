@@ -13,7 +13,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 - PNG: 8-bit and 16-bit, L/LA/RGB/RGBA
 - JPEG: 8-bit, L/RGB/RGBA, baseline and progressive
 - JPEG XL: 8-bit, RGB (no alpha support), encoded with `cjxl -e 4` or lower
-- WEBP: 8-bit RGB, RGBA, no animation support
+- WEBP: 8-bit, RGB or RGBA, lossless support, no animation support
 - TGA: 8-bit, indexed, L/LA/RGB/RGBA
 - GIF: indexed, animation support
 - BMP: indexed 1/4/8-bit no-RLE, 8-bit RGB/RGBA 
@@ -279,7 +279,8 @@ However, load flags are not the only way to select a `PixelType`, you can provid
       TGA,
       GIF,
       JXL,
-      SQZ
+      SQZ,
+      WEBP
   }
   ```
 
