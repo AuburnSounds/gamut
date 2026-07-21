@@ -113,9 +113,6 @@ void loadWEBP(ref Image image, IOStream *io, IOHandle handle, int page, int flag
         chans  = 4;
     }
 
-    //import core.stdc.stdio;
-    //printf("requestedComp = %d\n", requestedComp);
-
     ubyte* decoded = twp_read_from_memory(buf, len, &width, &height, format, decflags);
 
     if (decoded == null)
@@ -129,8 +126,7 @@ void loadWEBP(ref Image image, IOStream *io, IOHandle handle, int page, int flag
     image._width     = width;
     image._height    = height;
     image._type      = (format == twp_FORMAT_RGBA) ? PixelType.rgba8 : PixelType.rgb8;
-    //import core.stdc.stdio;
-    //printf("type = %d\n", format);
+
     image._pitch     = chans * width;
     image._pixelAspectRatio = GAMUT_UNKNOWN_ASPECT_RATIO;
     image._resolutionY      = GAMUT_UNKNOWN_RESOLUTION;

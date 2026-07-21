@@ -127,7 +127,7 @@ int main(string[] args)
         Image* result = &image;
 
         long timeDecodeBefore = getTickUs();
-        image.loadFromFile(input, LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS | LOAD_RGB | LOAD_NO_ALPHA);
+        image.loadFromFile(input, LAYOUT_VERT_STRAIGHT | LAYOUT_GAPLESS);
         long timeDecodeAfter  = getTickUs();
 
         if (image.isError)
@@ -188,7 +188,7 @@ int main(string[] args)
         {
             string declabel = "decode:";
             string enclabel = "encode:";
-            cwritef("<cyan>%20s</> <orange>%s</>    <green>%20s</> <orange>%s</>", 
+            cwritef("<cyan>%20s</> <orange>%s</>    <green>%20s</> <orange>%s</>\n", 
                     declabel,
                     prettyTime(timeDecodeAfter - timeDecodeBefore),
                     enclabel,

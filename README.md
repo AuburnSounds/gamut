@@ -13,6 +13,7 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 - PNG: 8-bit and 16-bit, L/LA/RGB/RGBA
 - JPEG: 8-bit, L/RGB/RGBA, baseline and progressive
 - JPEG XL: 8-bit, RGB (no alpha support), encoded with `cjxl -e 4` or lower
+- WEBP: 8-bit RGB, RGBA, no animation support
 - TGA: 8-bit, indexed, L/LA/RGB/RGBA
 - GIF: indexed, animation support
 - BMP: indexed 1/4/8-bit no-RLE, 8-bit RGB/RGBA 
@@ -36,6 +37,8 @@ It is `nothrow @nogc @safe` for usage in -betterC and in disabled-runtime D.
 
 ## Changelog
 
+- **v3.5** Added [WebP](https://wikipedia.org/wiki/WebP) input. Lossless and alpha channels supported. Animation not supported.
+  * Because WebP decoder is BSD-3-Clause, a new configuration "boost+mit+bsd3" has been introduced. Be sure to attribute copyright in your binaries.
 - **v3.4** QOIX encoder has a new "QOIPlane10" codec, specifically for 10-bit greyscale images with optional alpha. Nothing to do, such images encoded as QOI-10b will continue to decode. Use newer `convert` to get 50% faster decodes and 20% bitrate reduction for greyscale 10-bit images.
 - **v3.3** Added [SQZ](https://github.com/MarcioPais/SQZ) input and output. A MIT-licensed codec that beat guetzli-encoded JPEG by about 30%! It also encodes faster, but decodes 2x slower than baseline JPEG. Quality comparisons [here](https://encode.su/threads/4183-SQZ-Low-complexity-scalable-lossless-and-lossy-image-compression-library).
 - **v3** Added premultiplied alpha pixel types. **BREAKING**.
