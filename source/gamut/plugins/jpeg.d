@@ -94,6 +94,7 @@ void loadJPEG(ref Image image, IOStream *io, IOHandle handle, int page, int flag
     image._data = decoded.ptr;
     image._pitch = width * decodedComp;
     image._pixelAspectRatio = pixelAspectRatio == -1 ? GAMUT_UNKNOWN_ASPECT_RATIO : pixelAspectRatio;
+    // The JPEG decoder already returns DPI
     image._resolutionY = dotsPerInchY == -1 ? GAMUT_UNKNOWN_RESOLUTION : dotsPerInchY;
     image._layoutConstraints = LAYOUT_DEFAULT; // JPEG decoder follow no particular constraints (TODO?)   
     image._layerCount = 1;
