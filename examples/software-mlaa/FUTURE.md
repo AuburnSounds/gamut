@@ -5,11 +5,7 @@ Roughly in priority order. Most of these already exist in the SMAA reference
 
 ## Clear quality wins
 
-2. **Diagonal pattern detection.**
-   Only horizontal and vertical lines are recognised. A 45° edge is a run of one-pixel
-   steps, so each step is seen as a tiny isolated shape and gets little or uneven blending.
-   SMAA added a diagonal search for this: `SMAACalculateDiagWeights` in `SMAA.hlsl`,
-   plus the diagonal half of `Scripts/AreaTex.py`. Not measured yet.
+2. **Diagonal pattern detection.** => didn't work out, overly blurry
 
 3. **Colour edge detection.**
    Tune those thresholds.

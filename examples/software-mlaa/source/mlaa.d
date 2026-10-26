@@ -64,7 +64,7 @@ enum float MLAA_THRESHOLD = 0.1f;
 // Catches edges between colours of similar luma. Higher than
 // MLAA_THRESHOLD, since chroma noise is common and the eye is less
 // sensitive to chroma detail.
-/* @tuning */ enum float MLAA_CHROMA_THRESHOLD = 0.15f;
+/* @tuning */ enum float MLAA_CHROMA_THRESHOLD = 0.14f;
 
 // Maximum search distance, in pixels, at each side of a pixel.
 enum int MLAA_MAX_SEARCH_DISTANCE = 32;
