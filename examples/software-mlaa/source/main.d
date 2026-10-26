@@ -20,8 +20,6 @@ void usage()
 // on the input image, there is no history buffer, no jitter
 // and no motion vectors. It is not a temporal anti-aliasing.
 
-// TODO: blending is done in gamma space, linear space would be
-//       more correct (SMAA recommends a sRGB render target).
 // TODO: only works with 8-bit images.
 
 int main(string[] args)

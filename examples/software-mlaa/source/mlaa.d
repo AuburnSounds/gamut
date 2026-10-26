@@ -53,7 +53,7 @@ module mlaa;
 // and searches are done one pixel at a time.
 
 import core.stdc.stdlib;
-import core.stdc.math: fabs, floor;
+import core.stdc.math: fabs, floor, powf;
 
 nothrow @nogc:
 
@@ -257,12 +257,29 @@ void mlaa_32bit(
                 wb = aTop;
             }
 
+            // Blend in linear light, like SMAA does with a sRGB render
+            // target. Alpha is not gamma-encoded and is blended as is.
             float invSum = 1.0f / (wa + wb);
             for (int c = 0; c < 4; ++c)
             {
-                float a = P[c] + (A[c] - cast(float)P[c]) * wa;
-                float b = P[c] + (B[c] - cast(float)P[c]) * wb;
+                float p, va, vb;
+                if (c < 3)
+                {
+                    p  = g_sRGBToLinear[P[c]];
+                    va = g_sRGBToLinear[A[c]];
+                    vb = g_sRGBToLinear[B[c]];
+                }
+                else
+                {
+                    p  = P[c];
+                    va = A[c];
+                    vb = B[c];
+                }
+                float a = p + (va - p) * wa;
+                float b = p + (vb - p) * wb;
                 float v = (a * wa + b * wb) * invSum;
+                if (c < 3)
+                    v = linearToSRGB(v);
                 int iv = cast(int)(v + 0.5f);
                 if (iv < 0) iv = 0;
                 if (iv > 255) iv = 255;
@@ -282,6 +299,30 @@ float _max(float a, float b)
 float _copysign1(float x)
 {
     return x < 0 ? -1.0f : 1.0f;
+}
+
+// sRGB (0 to 255) to linear light (0 to 1), built at compile-time.
+static immutable float[256] g_sRGBToLinear = buildSRGBToLinear();
+
+float[256] buildSRGBToLinear() pure
+{
+    import std.math: pow;
+    float[256] t;
+    foreach (i; 0..256)
+    {
+        double s = i / 255.0;
+        t[i] = (s <= 0.04045) ? s / 12.92 : pow((s + 0.055) / 1.055, 2.4);
+    }
+    return t;
+}
+
+// Linear light (0 to 1) to sRGB (0 to 255), unrounded.
+// Only called on blended pixels, so the pow() cost is acceptable.
+float linearToSRGB(float v)
+{
+    if (v <= 0.0031308f)
+        return v * 12.92f * 255.0f;
+    return (1.055f * powf(v, 1.0f / 2.4f) - 0.055f) * 255.0f;
 }
 
 // Area under the line p1->p2, for the pixel x..x+1.
