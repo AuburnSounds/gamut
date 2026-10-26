@@ -8,7 +8,7 @@ Roughly in priority order. Most of these already exist in the SMAA reference
 2. **Diagonal pattern detection.** => didn't work out, overly blurry
 
 3. **Colour edge detection.**
-   Tune those thresholds.
+   Tune those thresholds. => done, probably a tiny bit to earn but hard to do.
 
 4. **Keep sharp corners sharp.**
    MLAA rounds the corners of rectangles, UI elements and text.

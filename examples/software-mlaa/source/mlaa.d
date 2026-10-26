@@ -37,7 +37,7 @@ module mlaa;
 // Only the MLAA part of SMAA is ported, that is SMAA 1x with:
 //  - luma + chroma edge detection, without local contrast adaptation,
 //  - no diagonal pattern detection,
-//  - no corner rounding,
+//  - corner detection, to keep sharp corners sharp,
 //  - no temporal supersampling / reprojection (SMAA T2x, 4x),
 //    there is no history buffer and no subpixel jitter.
 //
@@ -69,6 +69,10 @@ enum float MLAA_THRESHOLD = 0.08f;
 
 // Maximum search distance, in pixels, at each side of a pixel.
 enum int MLAA_MAX_SEARCH_DISTANCE = 32;
+
+// How much sharp corners are rounded, from 0 (kept sharp) to 1 (fully
+// rounded, as plain MLAA). Same as SMAA_CORNER_ROUNDING / 100.
+/* @tuning */ enum float MLAA_CORNER_ROUNDING = 0.1f;
 
 // Edge flags.
 enum : ubyte
@@ -217,6 +221,13 @@ void mlaa_32bit(
                 if (hasLeft(xr+1, y-1)) pattern |= 8;
 
                 areaOrtho(pattern, x - xl, xr - x, w[0], w[1]);
+
+                // Corners: crossing edges that continue one row further,
+                // below P or above the top neighbour.
+                cornerFactors(x - xl, xr - x,
+                              hasLeft(xl, y+1), hasLeft(xr+1, y+1),
+                              hasLeft(xl, y-2), hasLeft(xr+1, y-2),
+                              w[0], w[1]);
             }
 
             if (e & EDGE_LEFT)
@@ -239,6 +250,11 @@ void mlaa_32bit(
                 if (hasTop(x-1, yb+1)) pattern |= 8;
 
                 areaOrtho(pattern, y - yt, yb - y, w[2], w[3]);
+
+                cornerFactors(y - yt, yb - y,
+                              hasTop(x+1, yt), hasTop(x+1, yb+1),
+                              hasTop(x-2, yt), hasTop(x-2, yb+1),
+                              w[2], w[3]);
             }
         }
     }
@@ -401,6 +417,33 @@ void area(float p1x, float p1y, float p2x, float p2y, int x,
             a2 = fabs(t1);
         }
     }
+}
+
+// Reduces the blending of P (w1) and of its neighbour (w2) near a sharp
+// corner, that is when the crossing edge at the nearest end of the line
+// continues past the line: on P side (cP*) or neighbour side (cN*), at
+// the left (*L) or right (*R) end. Port of SMAADetectHorizontalCornerPattern
+// and SMAADetectVerticalCornerPattern.
+void cornerFactors(int left, int right,
+                   bool cPL, bool cPR, bool cNL, bool cNR,
+                   ref float w1, ref float w2)
+{
+    // Only the nearest end counts, both halved if at equal distance.
+    float useL = (left <= right) ? 1.0f : 0.0f;
+    float useR = (right <= left) ? 1.0f : 0.0f;
+    float rounding = (1.0f - MLAA_CORNER_ROUNDING) / (useL + useR);
+    float roundL = rounding * useL;
+    float roundR = rounding * useR;
+
+    float f1 = 1.0f - roundL * cPL - roundR * cPR;
+    float f2 = 1.0f - roundL * cNL - roundR * cNR;
+    w1 *= _saturate(f1);
+    w2 *= _saturate(f2);
+}
+
+float _saturate(float x)
+{
+    return x < 0 ? 0 : (x > 1 ? 1 : x);
 }
 
 // Area covered by the revectorized line, for a pixel at distance `left`
