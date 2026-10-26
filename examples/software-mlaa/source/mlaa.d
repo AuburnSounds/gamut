@@ -57,8 +57,9 @@ import core.stdc.math: fabs, floor, powf;
 
 nothrow @nogc:
 
-// Edge sensitivity, in luma units (0 to 1). Same as SMAA_THRESHOLD.
-enum float MLAA_THRESHOLD = 0.1f;
+// Edge sensitivity, in luma units (0 to 1). Like SMAA_THRESHOLD, but
+// lower than its 0.1 default, which was rated better on game images.
+enum float MLAA_THRESHOLD = 0.08f;
 
 // Edge sensitivity, in chroma units (Cb or Cr, -0.5 to 0.5).
 // Catches edges between colours of similar luma. Higher than
