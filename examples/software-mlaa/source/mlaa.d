@@ -74,6 +74,13 @@ enum float MLAA_THRESHOLD = 0.08f;
 // Maximum search distance, in pixels, at each side of a pixel.
 enum int MLAA_MAX_SEARCH_DISTANCE = 32;
 
+// Blending of short U-shaped lines (one-pixel bumps and dents): each area
+// a becomes (2a)^exponent / 2. Below 1 it blends them more (0.5 is SMAA's
+// smootharea), 1 leaves them as plain MLAA, above 1 keeps them sharper.
+// The effect fades out as the line gets longer.
+/* @tuning */ enum float MLAA_U_SHAPE_EXPONENT = 2.0f;
+enum float MLAA_U_SHAPE_MAX_DISTANCE = 32.0f; // SMOOTH_MAX_DISTANCE in AreaTex.py
+
 // How much sharp corners are rounded, from 0 (kept sharp) to 1 (fully
 // rounded, as plain MLAA). Same as SMAA_CORNER_ROUNDING / 100.
 /* @tuning */ enum float MLAA_CORNER_ROUNDING = 0.1f;
@@ -479,6 +486,18 @@ float _saturate(float x)
     return x < 0 ? 0 : (x > 1 ? 1 : x);
 }
 
+// Reshapes the areas of a short U-shaped line of length d, fading out
+// at MLAA_U_SHAPE_MAX_DISTANCE. Generalizes smootharea() in SMAA
+// AreaTex.py, which is the exponent 0.5.
+void smoothArea(float d, ref float a1, ref float a2)
+{
+    float p = _saturate(d / MLAA_U_SHAPE_MAX_DISTANCE);
+    float b1 = 0.5f * powf(2.0f * a1, MLAA_U_SHAPE_EXPONENT);
+    float b2 = 0.5f * powf(2.0f * a2, MLAA_U_SHAPE_EXPONENT);
+    a1 = b1 + (a1 - b1) * p;
+    a2 = b2 + (a2 - b2) * p;
+}
+
 // Area covered by the revectorized line, for a pixel at distance `left`
 // from the left end of the line and distance `right` from the right end.
 // Port of areaortho() in SMAA AreaTex.py, with no subpixel offset
@@ -522,6 +541,8 @@ void areaOrtho(int pattern, int left, int right, out float a1, out float a2)
             float b1, b2;
             area(0, o2, h, 0, left, a1, a2);
             area(h, 0, d, o2, left, b1, b2);
+            smoothArea(d, a1, a2);
+            smoothArea(d, b1, b2);
             a1 += b1;
             a2 += b2;
             break;
@@ -567,6 +588,8 @@ void areaOrtho(int pattern, int left, int right, out float a1, out float a2)
             float b1, b2;
             area(0, o1, h, 0, left, a1, a2);
             area(h, 0, d, o1, left, b1, b2);
+            smoothArea(d, a1, a2);
+            smoothArea(d, b1, b2);
             a1 += b1;
             a2 += b2;
             break;
