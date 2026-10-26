@@ -1,0 +1,14 @@
+{
+    "name": "software-mlaa",
+    "description": "Decode an image, apply MLAA, save the image. This is an entirely vibe-coded port!",
+    "license": "BSL-1.0+MIT",
+
+    "dependencies": {
+        "gamut": { "path": "../.." }
+    },
+
+    "subConfigurations":
+    {
+        "gamut": "boost+mit"
+    }
+}
