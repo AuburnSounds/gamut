@@ -35,7 +35,7 @@ module mlaa;
 //   Jimenez et al., "Practical Morphological Antialiasing", GPU Pro 2, 2011.
 //
 // Only the MLAA part of SMAA is ported, that is SMAA 1x with:
-//  - luma + chroma edge detection, without local contrast adaptation,
+//  - luma + chroma edge detection, with local contrast adaptation,
 //  - no diagonal pattern detection,
 //  - corner detection, to keep sharp corners sharp,
 //  - no temporal supersampling / reprojection (SMAA T2x, 4x),
@@ -66,6 +66,10 @@ enum float MLAA_THRESHOLD = 0.08f;
 // MLAA_THRESHOLD, since chroma noise is common and the eye is less
 // sensitive to chroma detail.
 /* @tuning */ enum float MLAA_CHROMA_THRESHOLD = 0.14f;
+
+// An edge is ignored when a nearby edge has more than this many times
+// its contrast. Same as SMAA_LOCAL_CONTRAST_ADAPTATION_FACTOR.
+/* @tuning */ enum float MLAA_LOCAL_CONTRAST_FACTOR = 2.5f;
 
 // Maximum search distance, in pixels, at each side of a pixel.
 enum int MLAA_MAX_SEARCH_DISTANCE = 32;
@@ -130,22 +134,51 @@ void mlaa_32bit(
         }
     }
 
-    bool isEdge(const(float)* a, const(float)* b)
+    // Luma and chroma contrast between (x, y) and its neighbour at
+    // (x - dx, y - dy). Zero when either pixel is outside the image.
+    void contrast(int x, int y, int dx, int dy, out float dl, out float dc)
     {
-        return fabs(a[0] - b[0]) >= MLAA_THRESHOLD
-            || fabs(a[1] - b[1]) >= MLAA_CHROMA_THRESHOLD
-            || fabs(a[2] - b[2]) >= MLAA_CHROMA_THRESHOLD;
+        dl = 0;
+        dc = 0;
+        int nx = x - dx;
+        int ny = y - dy;
+        if (nx < 0 || ny < 0 || x >= width || y >= height)
+            return;
+        const(float)* a = &ycc[(y*width+x)*3];
+        const(float)* b = &ycc[(ny*width+nx)*3];
+        dl = fabs(a[0] - b[0]);
+        dc = _max(fabs(a[1] - b[1]), fabs(a[2] - b[2]));
     }
 
+    // Local contrast adaptation, as SMAALumaEdgeDetectionPS: an edge is
+    // dropped when a nearby edge (left, top, right, bottom, left-left,
+    // top-top) has more than MLAA_LOCAL_CONTRAST_FACTOR times its
+    // contrast. Applied to luma and chroma separately.
     for (int y = 0; y < height; ++y)
     {
         for (int x = 0; x < width; ++x)
         {
-            const(float)* P = &ycc[(y*width+x)*3];
+            float lL, cL, lT, cT, lR, cR, lB, cB, lLL, cLL, lTT, cTT;
+            contrast(x,   y,   1, 0, lL,  cL);  // left
+            contrast(x,   y,   0, 1, lT,  cT);  // top
+            contrast(x+1, y,   1, 0, lR,  cR);  // right
+            contrast(x,   y+1, 0, 1, lB,  cB);  // bottom
+            contrast(x-1, y,   1, 0, lLL, cLL); // left-left
+            contrast(x,   y-1, 0, 1, lTT, cTT); // top-top
+
+            float maxL = _max(_max(_max(lL, lT), _max(lR, lB)), _max(lLL, lTT));
+            float maxC = _max(_max(_max(cL, cT), _max(cR, cB)), _max(cLL, cTT));
+
+            bool isEdge(float l, float c)
+            {
+                return (l >= MLAA_THRESHOLD && MLAA_LOCAL_CONTRAST_FACTOR * l >= maxL)
+                    || (c >= MLAA_CHROMA_THRESHOLD && MLAA_LOCAL_CONTRAST_FACTOR * c >= maxC);
+            }
+
             ubyte e = 0;
-            if (x > 0 && isEdge(P, P - 3))
+            if (isEdge(lL, cL))
                 e |= EDGE_LEFT;
-            if (y > 0 && isEdge(P, P - width*3))
+            if (isEdge(lT, cT))
                 e |= EDGE_TOP;
             edges[y*width+x] = e;
         }
