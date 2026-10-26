@@ -5,12 +5,6 @@ Roughly in priority order. Most of these already exist in the SMAA reference
 
 ## Clear quality wins
 
-1. **Blend in linear light.**
-   Blending currently happens in gamma space, which makes edges between contrasting
-   colours look too dark and too heavy (likely part of why thin black lines look thick).
-   Fix: a 256-entry sRGB→linear table, plus the reverse conversion. SMAA itself
-   recommends blending in linear light.
-
 2. **Diagonal pattern detection.**
    Only horizontal and vertical lines are recognised. A 45° edge is a run of one-pixel
    steps, so each step is seen as a tiny isolated shape and gets little or uneven blending.
@@ -18,10 +12,7 @@ Roughly in priority order. Most of these already exist in the SMAA reference
    plus the diagonal half of `Scripts/AreaTex.py`. Not measured yet.
 
 3. **Colour edge detection.**
-   Edges are found by comparing brightness only, so an edge between two colours of
-   similar brightness (e.g. some reds against some greens) is missed.
-   SMAA's alternative (`SMAAColorEdgeDetectionPS`) uses the largest per-channel RGB
-   difference, at about the same cost.
+   Tune those thresholds.
 
 4. **Keep sharp corners sharp.**
    MLAA rounds the corners of rectangles, UI elements and text.

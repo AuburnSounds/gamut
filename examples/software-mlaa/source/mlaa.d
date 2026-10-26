@@ -35,7 +35,7 @@ module mlaa;
 //   Jimenez et al., "Practical Morphological Antialiasing", GPU Pro 2, 2011.
 //
 // Only the MLAA part of SMAA is ported, that is SMAA 1x with:
-//  - luma edge detection, without local contrast adaptation,
+//  - luma + chroma edge detection, without local contrast adaptation,
 //  - no diagonal pattern detection,
 //  - no corner rounding,
 //  - no temporal supersampling / reprojection (SMAA T2x, 4x),
@@ -59,6 +59,12 @@ nothrow @nogc:
 
 // Edge sensitivity, in luma units (0 to 1). Same as SMAA_THRESHOLD.
 enum float MLAA_THRESHOLD = 0.1f;
+
+// Edge sensitivity, in chroma units (Cb or Cr, -0.5 to 0.5).
+// Catches edges between colours of similar luma. Higher than
+// MLAA_THRESHOLD, since chroma noise is common and the eye is less
+// sensitive to chroma detail.
+/* @tuning */ enum float MLAA_CHROMA_THRESHOLD = 0.15f;
 
 // Maximum search distance, in pixels, at each side of a pixel.
 enum int MLAA_MAX_SEARCH_DISTANCE = 32;
@@ -84,17 +90,23 @@ void mlaa_32bit(
         return;
 
     size_t N = cast(size_t)width * height;
-    float* luma    = cast(float*) malloc(N * float.sizeof);
+    float* ycc     = cast(float*) malloc(N * 3 * float.sizeof);
     ubyte* edges   = cast(ubyte*) malloc(N);
     float* weights = cast(float*) malloc(N * 4 * float.sizeof);
     scope(exit)
     {
-        free(luma);
+        free(ycc);
         free(edges);
         free(weights);
     }
 
     // 1. Edge detection.
+    //
+    // An edge is where luma changes by MLAA_THRESHOLD, as SMAA luma edge
+    // detection, or where Cb or Cr changes by MLAA_CHROMA_THRESHOLD.
+    // The chroma test finds edges between colours of similar brightness,
+    // that luma alone misses (like SMAAColorEdgeDetectionPS), while being
+    // less sensitive to noise than a per-channel RGB difference.
 
     for (int y = 0; y < height; ++y)
     {
@@ -102,19 +114,33 @@ void mlaa_32bit(
         for (int x = 0; x < width; ++x)
         {
             const(ubyte)* p = &scan[x*4];
-            luma[y*width+x] = (0.2126f * p[0] + 0.7152f * p[1] + 0.0722f * p[2]) / 255.0f;
+            float r = p[0] / 255.0f;
+            float g = p[1] / 255.0f;
+            float b = p[2] / 255.0f;
+            float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+            float* o = &ycc[(y*width+x)*3];
+            o[0] = Y;
+            o[1] = (b - Y) / 1.8556f; // Cb, BT.709
+            o[2] = (r - Y) / 1.5748f; // Cr, BT.709
         }
+    }
+
+    bool isEdge(const(float)* a, const(float)* b)
+    {
+        return fabs(a[0] - b[0]) >= MLAA_THRESHOLD
+            || fabs(a[1] - b[1]) >= MLAA_CHROMA_THRESHOLD
+            || fabs(a[2] - b[2]) >= MLAA_CHROMA_THRESHOLD;
     }
 
     for (int y = 0; y < height; ++y)
     {
         for (int x = 0; x < width; ++x)
         {
-            float L = luma[y*width+x];
+            const(float)* P = &ycc[(y*width+x)*3];
             ubyte e = 0;
-            if (x > 0 && fabs(L - luma[y*width+x-1]) >= MLAA_THRESHOLD)
+            if (x > 0 && isEdge(P, P - 3))
                 e |= EDGE_LEFT;
-            if (y > 0 && fabs(L - luma[(y-1)*width+x]) >= MLAA_THRESHOLD)
+            if (y > 0 && isEdge(P, P - width*3))
                 e |= EDGE_TOP;
             edges[y*width+x] = e;
         }
