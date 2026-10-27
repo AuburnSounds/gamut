@@ -106,12 +106,12 @@ void mlaa_32bit(
         return;
 
     size_t N = cast(size_t)width * height;
-    float* ycc     = cast(float*) malloc(N * 3 * float.sizeof);
+    float* ycca    = cast(float*) malloc(N * 4 * float.sizeof);
     ubyte* edges   = cast(ubyte*) malloc(N);
     float* weights = cast(float*) malloc(N * 4 * float.sizeof);
     scope(exit)
     {
-        free(ycc);
+        free(ycca);
         free(edges);
         free(weights);
     }
@@ -123,6 +123,9 @@ void mlaa_32bit(
     // The chroma test finds edges between colours of similar brightness,
     // that luma alone misses (like SMAAColorEdgeDetectionPS), while being
     // less sensitive to noise than a per-channel RGB difference.
+    // Colour is premultiplied by alpha, so the colour of fully transparent
+    // pixels doesn't matter, and a change of alpha by MLAA_THRESHOLD is
+    // also an edge.
 
     for (int y = 0; y < height; ++y)
     {
@@ -130,19 +133,21 @@ void mlaa_32bit(
         for (int x = 0; x < width; ++x)
         {
             const(ubyte)* p = &scan[x*4];
-            float r = p[0] / 255.0f;
-            float g = p[1] / 255.0f;
-            float b = p[2] / 255.0f;
+            float alpha = p[3] / 255.0f;
+            float r = p[0] / 255.0f * alpha;
+            float g = p[1] / 255.0f * alpha;
+            float b = p[2] / 255.0f * alpha;
             float Y = 0.2126f * r + 0.7152f * g + 0.0722f * b;
-            float* o = &ycc[(y*width+x)*3];
+            float* o = &ycca[(y*width+x)*4];
             o[0] = Y;
             o[1] = (b - Y) / 1.8556f; // Cb, BT.709
             o[2] = (r - Y) / 1.5748f; // Cr, BT.709
+            o[3] = alpha;
         }
     }
 
-    // Luma and chroma contrast between (x, y) and its neighbour at
-    // (x - dx, y - dy). Zero when either pixel is outside the image.
+    // Luma (or alpha) and chroma contrast between (x, y) and its neighbour
+    // at (x - dx, y - dy). Zero when either pixel is outside the image.
     void contrast(int x, int y, int dx, int dy, out float dl, out float dc)
     {
         dl = 0;
@@ -151,9 +156,9 @@ void mlaa_32bit(
         int ny = y - dy;
         if (nx < 0 || ny < 0 || x >= width || y >= height)
             return;
-        const(float)* a = &ycc[(y*width+x)*3];
-        const(float)* b = &ycc[(ny*width+nx)*3];
-        dl = fabs(a[0] - b[0]);
+        const(float)* a = &ycca[(y*width+x)*4];
+        const(float)* b = &ycca[(ny*width+nx)*4];
+        dl = _max(fabs(a[0] - b[0]), fabs(a[3] - b[3]));
         dc = _max(fabs(a[1] - b[1]), fabs(a[2] - b[2]));
     }
 
@@ -341,29 +346,39 @@ void mlaa_32bit(
             }
 
             // Blend in linear light, like SMAA does with a sRGB render
-            // target. Alpha is not gamma-encoded and is blended as is.
+            // target, and with premultiplied alpha, so that the colour of
+            // transparent pixels doesn't bleed into their neighbours.
+            // Alpha is not gamma-encoded.
+            float alphaP = P[3] / 255.0f;
+            float alphaA = A[3] / 255.0f;
+            float alphaB = B[3] / 255.0f;
             float invSum = 1.0f / (wa + wb);
+            float[4] v;
             for (int c = 0; c < 4; ++c)
             {
                 float p, va, vb;
                 if (c < 3)
                 {
-                    p  = g_sRGBToLinear[P[c]];
-                    va = g_sRGBToLinear[A[c]];
-                    vb = g_sRGBToLinear[B[c]];
+                    p  = g_sRGBToLinear[P[c]] * alphaP;
+                    va = g_sRGBToLinear[A[c]] * alphaA;
+                    vb = g_sRGBToLinear[B[c]] * alphaB;
                 }
                 else
                 {
-                    p  = P[c];
-                    va = A[c];
-                    vb = B[c];
+                    p  = alphaP;
+                    va = alphaA;
+                    vb = alphaB;
                 }
                 float a = p + (va - p) * wa;
                 float b = p + (vb - p) * wb;
-                float v = (a * wa + b * wb) * invSum;
-                if (c < 3)
-                    v = linearToSRGB(v);
-                int iv = cast(int)(v + 0.5f);
+                v[c] = (a * wa + b * wb) * invSum;
+            }
+
+            float invAlpha = (v[3] > 0) ? 1.0f / v[3] : 0.0f;
+            for (int c = 0; c < 4; ++c)
+            {
+                float f = (c < 3) ? linearToSRGB(v[c] * invAlpha) : v[3] * 255.0f;
+                int iv = cast(int)(f + 0.5f);
                 if (iv < 0) iv = 0;
                 if (iv > 255) iv = 255;
                 dst[x*4+c] = cast(ubyte)iv;
