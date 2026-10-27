@@ -59,6 +59,8 @@ nothrow @nogc:
 
 // Edge sensitivity, in luma units (0 to 1). Like SMAA_THRESHOLD, but
 // lower than its 0.1 default, which was rated better on game images.
+// Also the alpha sensitivity: a change of alpha (0 to 1) by this much
+// is an edge too. Not tuned separately for alpha.
 enum float MLAA_THRESHOLD = 0.08f;
 
 // Edge sensitivity, in chroma units (Cb or Cr, -0.5 to 0.5).
