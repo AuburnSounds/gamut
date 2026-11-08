@@ -158,7 +158,7 @@ Use the `convert` tool to encode QOIX.
 > - `create()` or regular constructor `this()` creates a new owned image filled with zeros.
 > - `createNoInit()` or `setSize()` creates a new owned uninitialized image.
 > - `createView()` creates a view into existing data.
-> - `createNoData()` creates a new image with no data pointed to (still has a type, size...).
+> - `createWithNoData()` creates a new image with no data pointed to (still has a type, size...).
 
   ```d
   // Create with transparent black.
@@ -278,6 +278,7 @@ However, load flags are not the only way to select a `PixelType`, you can provid
       DDS,
       TGA,
       GIF,
+      BMP,
       JXL,
       SQZ,
       WEBP
@@ -373,7 +374,7 @@ Here is how to process pixels of an `rgba8` image in-place.
       assert(image.hasData());
       for (int y = 0; y < image.height(); ++y)
       {
-          byte* scan = cast(ubyte*) image.scanptr(y);
+          ubyte* scan = cast(ubyte*) image.scanptr(y);
           for (int x = 0; x < image.width(); ++x)
           {
               float r = scan[4*x + 0] / 255.0f;
@@ -381,8 +382,8 @@ Here is how to process pixels of an `rgba8` image in-place.
               float b = scan[4*x + 2] / 255.0f;
               float a = scan[4*x + 3] / 255.0f;
               r = (gain * (r + lift * (1-r)))^^(1/gamma);
-              g = (gain * (g + lift * (1-r)))^^(1/gamma);
-              b = (gain * (b + lift * (1-r)))^^(1/gamma);
+              g = (gain * (g + lift * (1-g)))^^(1/gamma);
+              b = (gain * (b + lift * (1-b)))^^(1/gamma);
               if (r < 0) r = 0;
               if (g < 0) g = 0;
               if (b < 0) b = 0;
@@ -518,7 +519,7 @@ If you have both `LAYOUT_GAPLESS` and `LAYOUT_VERT_STRAIGHT`, then you can acces
 
   ```d
   image.setSize(640, 480, PixelType.rgba8, LAYOUT_GAPLESS | LAYOUT_VERT_STRAIGHT);
-  ubyte[] allpixels = image.allPixelsAtOnce(y);
+  ubyte[] allpixels = image.allPixelsAtOnce();
   ```
 
 `LAYOUT_GAPLESS` is incompatible with constraints that needs excess bytes, like borders, scanline alignment, trailing pixels...
@@ -563,7 +564,7 @@ All `Image` have a number of layers.
 Image image;
 image.create(640 ,480);
 assert(image.layers == 1); // typical image has one layer
-assert(image.hasOneLayer);
+assert(image.hasSingleLayer);
 ```
 
 - Create a multi-layer image, cleared with zeroes:
@@ -584,11 +585,11 @@ assert(image.layers == 24);
 // Create view into existing data.
 // layerOffsetBytes is byte offset between first scanlines 
 // of two consecutive layers.
-image.createLayeredViewFromData(data.ptr, 
-                                w, h, numLaters, 
-                                PixelType.rgb8, 
-                                pitchbytes,
-                                layerOffsetBytes);
+image.createLayeredView(data.ptr, 
+                        w, h, numLaters, 
+                        PixelType.rgb8, 
+                        pitchbytes,
+                        layerOffsetBytes);
 ```
 
 > Gamut **Image** is secretly similar to 2D Array Texture in OpenGL. Each layer is store consecutively in memory.
@@ -600,7 +601,7 @@ image.createLayeredViewFromData(data.ptr,
 
 ```d
 Image image;
-image.create(640, 480, 5);
+image.createLayered(640, 480, 5);
 assert(image.layer(4).width  == 640);
 assert(image.layer(4).height == 480);
 assert(image.layer(4).layers ==   1);
